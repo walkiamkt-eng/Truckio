@@ -11,6 +11,8 @@ import { FleetDashboard } from './components/fleet/FleetDashboard.tsx';
 import { IncidentBoard } from './components/fleet/IncidentBoard.tsx';
 import { PlansManager } from './components/fleet/PlansManager.tsx';
 import { FleetReportPDFModal } from './components/fleet/FleetReportPDFModal.tsx';
+import { LoginView } from './components/auth/LoginView.tsx';
+import { AuthService } from './services/authService';
 import { StorageService, TRUCKIO_STATE_CHANGED } from './services/storageService.ts';
 import { NotificationService } from './services/notificationService.ts';
 import { INITIAL_USERS } from './db/indexedDB.ts';
@@ -25,8 +27,8 @@ import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [currentUser, setCurrentUser] = useState<User>(INITIAL_USERS[0]); // Starts as Driver Carlos Gutiérrez
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [plans, setPlans] = useState<MaintenancePlan[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -34,31 +36,52 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('driver_hub');
   const [globalPdfModalOpen, setGlobalPdfModalOpen] = useState(false);
 
+  // Verificación de sesión Supabase
+  const checkSession = useCallback(async () => {
+    try {
+      const user = await AuthService.getCurrentProfile();
+      setCurrentUser(user);
+      if (user) {
+        if (user.role === 'driver') {
+          setActiveTab('driver_hub');
+        } else if (activeTab === 'driver_hub') {
+          setActiveTab('fleet_health');
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar sesión:', error);
+      setCurrentUser(null);
+    }
+  }, [activeTab]);
+
   const loadData = useCallback(async () => {
+    if (!currentUser) return;
+
     try {
       await StorageService.init();
+      const tenantId = currentUser.tenant_id;
+
       const [u, v, p, i] = await Promise.all([
-        StorageService.getUsers(),
-        StorageService.getVehicles(),
-        StorageService.getMaintenancePlans(),
-        StorageService.getIssues(),
+        StorageService.getUsers(tenantId),
+        StorageService.getVehicles(tenantId),
+        StorageService.getMaintenancePlans(tenantId),
+        StorageService.getIssues(tenantId),
       ]);
 
-      // Aseguramos que siempre haya al menos los usuarios iniciales de demostración
-      if (Array.isArray(u) && u.length >= 2) {
+      if (Array.isArray(u) && u.length > 0) {
         setUsers(u);
       } else {
-        setUsers(INITIAL_USERS);
+        setUsers([currentUser]);
       }
 
       setVehicles(v || []);
       setPlans(p || []);
       setIssues(i || []);
 
-      // Compute semaphoric health for all vehicles
+      // Calcular semáforo de salud para los vehículos de la empresa
       if (Array.isArray(v) && v.length > 0) {
         const healthPromises = v.map(async (veh) => {
-          const h = await StorageService.calculateVehicleHealth(veh);
+          const h = await StorageService.calculateVehicleHealth(veh, p || [], i || []);
           return { id: veh.id, health: h };
         });
         const healthResults = await Promise.all(healthPromises);
@@ -69,28 +92,40 @@ export default function App() {
         setHealthMap(hMap);
       }
 
-      // Check driver local notifications
+      // Notificaciones para chofer
       if (currentUser.role === 'driver') {
         NotificationService.checkDriverMaintenanceAlerts(currentUser, v || [], p || []);
       }
     } catch (err) {
-      console.error('Error loading Truckio data:', err);
-      // Fallback seguro en caso de error
-      setUsers(INITIAL_USERS);
+      console.error('Error cargando datos de Truckio:', err);
     } finally {
       setLoading(false);
     }
   }, [currentUser]);
 
-  // Listener para carga inicial, reconexión de red y sincronización de eventos de la app
+  // Carga inicial de sesión
   useEffect(() => {
-    loadData();
+    const initApp = async () => {
+      setLoading(true);
+      await checkSession();
+      setLoading(false);
+    };
+    initApp();
+  }, []);
+
+  // Carga de datos cuando el usuario está autenticado y manejo de eventos online / sync
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+    }
 
     const handleSyncAndReload = async () => {
       if (!StorageService.isEffectivelyOffline()) {
         await StorageService.syncPendingQueue();
       }
-      loadData();
+      if (currentUser) {
+        loadData();
+      }
     };
 
     window.addEventListener('online', handleSyncAndReload);
@@ -100,14 +135,12 @@ export default function App() {
       window.removeEventListener('online', handleSyncAndReload);
       window.removeEventListener(TRUCKIO_STATE_CHANGED, handleSyncAndReload);
     };
-  }, [loadData]);
+  }, [currentUser, loadData]);
 
-  // Re-check alerts when user changes
-  useEffect(() => {
-    if (currentUser.role === 'driver' && vehicles.length > 0 && plans.length > 0) {
-      NotificationService.checkDriverMaintenanceAlerts(currentUser, vehicles, plans);
-    }
-  }, [currentUser, vehicles, plans]);
+  const handleLogout = async () => {
+    await AuthService.signOut();
+    setCurrentUser(null);
+  };
 
   if (loading) {
     return (
@@ -116,34 +149,32 @@ export default function App() {
           <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
         </div>
         <h2 className="text-lg font-bold font-mono tracking-wider text-white">TRUCKIO FLEET OS</h2>
-        <p className="text-xs text-slate-400 mt-1">Cargando base de datos IndexedDB local...</p>
+        <p className="text-xs text-slate-400 mt-1">Verificando credenciales de acceso...</p>
       </div>
     );
   }
 
+  // Si no hay sesión iniciada, mostramos el login
+  if (!currentUser) {
+    return <LoginView onLoginSuccess={checkSession} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
-      {/* Offline Status & Background Sync Queue Banner */}
+      {/* Banner de Estado Offline */}
       <OfflineBanner />
 
-      {/* Main Header & Role Switcher */}
+      {/* Header Principal con Datos del Usuario Autenticado */}
       <Header
         currentUser={currentUser}
-        onUserChange={(newUser) => {
-          setCurrentUser(newUser);
-          if (newUser.role === 'driver') {
-            setActiveTab('driver_hub');
-          } else {
-            setActiveTab('fleet_health');
-          }
-        }}
-        availableUsers={users.length > 0 ? users : INITIAL_USERS}
+        availableUsers={users.length > 0 ? users : [currentUser]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onLogout={handleLogout}
         onOpenFleetPdf={() => setGlobalPdfModalOpen(true)}
       />
 
-      {/* Main View Area */}
+      {/* Área Principal */}
       <main className="flex-1 pb-16">
         {currentUser.role === 'driver' ? (
           <>
@@ -208,7 +239,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Global Fleet Report PDF Modal */}
+      {/* Modal para Generar Informe PDF */}
       {globalPdfModalOpen && (
         <FleetReportPDFModal
           vehicles={vehicles}

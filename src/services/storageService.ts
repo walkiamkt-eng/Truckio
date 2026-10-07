@@ -50,6 +50,10 @@ export class StorageService {
     notifyStateChanged();
   }
 
+  public static async syncPendingQueue(): Promise<void> {
+    await SyncService.processQueue();
+  }
+
   public static async getAdminEventsFeed(): Promise<Issue[]> {
     if (isEffectivelyOffline()) {
       await this.init();
@@ -102,7 +106,7 @@ export class StorageService {
   }
 
   // --- USERS ---
-  public static async getUsers(tenantId: string = DEFAULT_TENANT_ID): Promise<User[]> {
+  public static async getUsers(tenantId?: string): Promise<User[]> {
     const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
     if (isEffectivelyOffline()) {
       await this.init();
@@ -110,14 +114,21 @@ export class StorageService {
       return localUsers.length > 0 ? localUsers : INITIAL_USERS;
     }
     try {
-      const { data, error } = await supabase.from('users').select('*').eq('tenant_id', validTenantId);
+      const { data, error } = await supabase.from('profiles').select('*').eq('tenant_id', validTenantId);
       if (error || !data || data.length === 0) {
         await this.init();
         const localUsers = await db.users.where('tenant_id').equals(validTenantId).toArray();
         return localUsers.length > 0 ? localUsers : INITIAL_USERS;
       }
-      await db.users.bulkPut(data);
-      return data;
+      const mappedUsers: User[] = data.map((p) => ({
+        id: p.id,
+        tenant_id: p.tenant_id,
+        email: p.email || '',
+        full_name: p.full_name,
+        role: p.role,
+      }));
+      await db.users.bulkPut(mappedUsers);
+      return mappedUsers;
     } catch {
       await this.init();
       const localUsers = await db.users.where('tenant_id').equals(validTenantId).toArray();
@@ -126,7 +137,7 @@ export class StorageService {
   }
 
   // --- VEHICLES ---
-  public static async getVehicles(tenantId: string = DEFAULT_TENANT_ID): Promise<Vehicle[]> {
+  public static async getVehicles(tenantId?: string): Promise<Vehicle[]> {
     const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
     if (isEffectivelyOffline()) {
       await this.init();
@@ -239,22 +250,23 @@ export class StorageService {
   }
 
   // --- MAINTENANCE PLANS ---
-  public static async getMaintenancePlans(tenantId: string = DEFAULT_TENANT_ID): Promise<MaintenancePlan[]> {
+  public static async getMaintenancePlans(tenantId?: string): Promise<MaintenancePlan[]> {
+    const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
     if (isEffectivelyOffline()) {
       await this.init();
-      return await db.maintenance_plans.toArray();
+      return await db.maintenance_plans.where('tenant_id').equals(validTenantId).toArray();
     }
     try {
-      const { data, error } = await supabase.from('maintenance_plans').select('*');
+      const { data, error } = await supabase.from('maintenance_plans').select('*').eq('tenant_id', validTenantId);
       if (error) {
         await this.init();
-        return await db.maintenance_plans.toArray();
+        return await db.maintenance_plans.where('tenant_id').equals(validTenantId).toArray();
       }
       if (data && data.length > 0) await db.maintenance_plans.bulkPut(data);
       return data || [];
     } catch {
       await this.init();
-      return await db.maintenance_plans.toArray();
+      return await db.maintenance_plans.where('tenant_id').equals(validTenantId).toArray();
     }
   }
 
@@ -277,10 +289,11 @@ export class StorageService {
   }
 
   public static async createMaintenancePlan(planData: Omit<MaintenancePlan, 'id' | 'created_at'>): Promise<MaintenancePlan> {
-    const payload = { ...planData, tenant_id: planData.tenant_id || DEFAULT_TENANT_ID };
+    const validTenantId = planData.tenant_id && planData.tenant_id.length === 36 ? planData.tenant_id : DEFAULT_TENANT_ID;
+    const payload = { ...planData, tenant_id: validTenantId };
     if (isEffectivelyOffline()) {
       await this.init();
-      const newPlan: MaintenancePlan = { ...planData, id: crypto.randomUUID(), created_at: new Date().toISOString() };
+      const newPlan: MaintenancePlan = { ...planData, tenant_id: validTenantId, id: crypto.randomUUID(), created_at: new Date().toISOString() };
       await this.enqueueOfflineAction('create_maintenance_plan', newPlan);
       await db.maintenance_plans.put(newPlan);
       notifyStateChanged();
@@ -294,22 +307,27 @@ export class StorageService {
   }
 
   // --- ISSUES ---
-  public static async getIssues(tenantId: string = DEFAULT_TENANT_ID): Promise<Issue[]> {
+  public static async getIssues(tenantId?: string): Promise<Issue[]> {
+    const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
     if (isEffectivelyOffline()) {
       await this.init();
-      return await db.issues.toArray();
+      return await db.issues.where('tenant_id').equals(validTenantId).toArray();
     }
     try {
-      const { data, error } = await supabase.from('issues').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('issues')
+        .select('*')
+        .eq('tenant_id', validTenantId)
+        .order('created_at', { ascending: false });
       if (error) {
         await this.init();
-        return await db.issues.toArray();
+        return await db.issues.where('tenant_id').equals(validTenantId).toArray();
       }
       if (data && data.length > 0) await db.issues.bulkPut(data);
       return data || [];
     } catch {
       await this.init();
-      return await db.issues.toArray();
+      return await db.issues.where('tenant_id').equals(validTenantId).toArray();
     }
   }
 
@@ -352,7 +370,6 @@ export class StorageService {
     plans: MaintenancePlan[] = [],
     issues: Issue[] = []
   ): { status: 'OK' | 'WARNING' | 'CRITICAL'; score: number; reason: string } {
-    // 1. Filtrar incidencias abiertas para este vehículo
     const vehicleIssues = issues.filter(
       (i) => i.vehicle_id === vehicle.id && i.status !== 'resolved' && i.status !== 'closed'
     );
@@ -366,7 +383,6 @@ export class StorageService {
       };
     }
 
-    // 2. Verificar planes de mantenimiento vencidos por kilometraje o fecha
     const vehiclePlans = plans.filter((p) => p.vehicle_id === vehicle.id);
     const hasOverduePlan = vehiclePlans.some((plan) => {
       const isMileageOverdue =
