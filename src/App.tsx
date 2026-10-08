@@ -4,25 +4,27 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Header } from './components/common/Header.tsx';
-import { OfflineBanner } from './components/common/OfflineBanner.tsx';
-import { DriverView } from './components/driver/DriverView.tsx';
-import { FleetDashboard } from './components/fleet/FleetDashboard.tsx';
-import { IncidentBoard } from './components/fleet/IncidentBoard.tsx';
-import { PlansManager } from './components/fleet/PlansManager.tsx';
-import { FleetReportPDFModal } from './components/fleet/FleetReportPDFModal.tsx';
-import { LoginView } from './components/auth/LoginView.tsx';
+import { Header } from './components/common/Header';
+import { OfflineBanner } from './components/common/OfflineBanner';
+import { DriverView } from './components/driver/DriverView';
+import { FleetDashboard } from './components/fleet/FleetDashboard';
+import { IncidentBoard } from './components/fleet/IncidentBoard';
+import { PlansManager } from './components/fleet/PlansManager';
+import { FleetReportPDFModal } from './components/fleet/FleetReportPDFModal';
+import { LoginView } from './components/auth/LoginView';
+import { UserManagementView } from './components/users/UserManagementView';
+import { DispatchView } from './components/dispatch/DispatchView';
 import { AuthService } from './services/authService';
-import { StorageService, TRUCKIO_STATE_CHANGED } from './services/storageService.ts';
-import { NotificationService } from './services/notificationService.ts';
-import { INITIAL_USERS } from './db/indexedDB.ts';
+import { StorageService, TRUCKIO_STATE_CHANGED } from './services/storageService';
+import { NotificationService } from './services/notificationService';
+import { INITIAL_USERS } from './db/indexedDB';
 import type {
   User,
   Vehicle,
   MaintenancePlan,
   Issue,
   VehicleMaintenanceHealth,
-} from './types/truckio.ts';
+} from './types/truckio';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -217,6 +219,15 @@ export default function App() {
                 onRefresh={loadData}
               />
             )}
+            {activeTab === 'dispatch' && (
+              <div className="max-w-7xl mx-auto px-4 py-6">
+                <DispatchView
+                  currentUser={currentUser}
+                  vehicles={vehicles}
+                  users={users}
+                />
+              </div>
+            )}
             {activeTab === 'fleet_issues' && (
               <div className="max-w-7xl mx-auto px-4 py-6">
                 <IncidentBoard
@@ -234,6 +245,9 @@ export default function App() {
                 currentUser={currentUser}
                 onRefresh={loadData}
               />
+            )}
+            {activeTab === 'users' && (
+              <UserManagementView currentUser={currentUser} />
             )}
           </>
         )}

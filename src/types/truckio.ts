@@ -22,11 +22,13 @@ export interface User {
   created_at: string;
 }
 
+export type AssetStatus = 'available' | 'assigned' | 'maintenance';
+
 export interface Vehicle {
   id: string;
   tenant_id: string;
   license_plate: string;
-  type: VehicleType;
+  type?: VehicleType;
   brand: string;
   model: string;
   year?: number;
@@ -34,8 +36,40 @@ export interface Vehicle {
   current_mileage: number;
   current_engine_hours: number;
   is_active: boolean;
+  status?: AssetStatus;
   notes?: string;
   created_at: string;
+}
+
+export interface Trailer {
+  id: string;
+  tenant_id: string;
+  plate: string;
+  type?: string;
+  status: AssetStatus;
+  created_at?: string;
+}
+
+export type AssignmentStatus = 'scheduled' | 'active' | 'completed' | 'cancelled';
+
+export interface Assignment {
+  id: string;
+  tenant_id: string;
+  driver_id: string;
+  vehicle_id: string;
+  trailer_id?: string | null;
+  origin?: string;
+  destination?: string;
+  notes?: string;
+  status: AssignmentStatus;
+  start_time?: string;
+  end_time?: string;
+  created_at?: string;
+  
+  // Campos populados (joins)
+  driver_name?: string;
+  vehicle_plate?: string;
+  trailer_plate?: string;
 }
 
 export interface MaintenancePlan {
@@ -123,4 +157,3 @@ export interface NotificationItem {
   read: boolean;
   created_at: string;
 }
-

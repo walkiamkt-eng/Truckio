@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Truck, Wifi, WifiOff, RotateCcw, ChevronDown, Check, FileText } from 'lucide-react';
-import { PWAInstallButton } from './PWAInstallButton.tsx';
-import { NotificationBell } from './NotificationBell.tsx';
-import { useOnlineStatus } from '../../hooks/useOnlineStatus.ts';
-import { StorageService } from '../../services/storageService.ts';
-import type { User, UserRole } from '../../types/truckio.ts';
+import { Truck, Wifi, WifiOff, RotateCcw, ChevronDown, Check, FileText, Users, Navigation } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
+import { NotificationBell } from './NotificationBell';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { StorageService } from '../../services/storageService';
+import type { User, UserRole } from '../../types/truckio';
 
 interface HeaderProps {
   currentUser: User;
-  onUserChange: (user: User) => void;
+  onUserChange?: (user: User) => void;
   availableUsers: User[];
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onLogout?: () => void;
   onOpenFleetPdf?: () => void;
 }
 
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   availableUsers,
   activeTab,
   onTabChange,
+  onLogout,
   onOpenFleetPdf,
 }) => {
   const { isOnline, toggleSimulatedOffline } = useOnlineStatus();
@@ -88,7 +90,6 @@ export const Header: React.FC<HeaderProps> = ({
     return u.full_name || (u as any).name || 'Usuario';
   };
 
-  // Filtra la lista según el rol activo para que el Administrador no vea a Gutiérrez
   const filteredUsers = availableUsers.filter((u) => {
     if (currentUser?.role === 'driver') {
       return u.role === 'driver';
@@ -120,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Desktop Nav */}
+          {/* NAVEGACIÓN PRINCIPAL */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
             {currentUser?.role === 'driver' ? (
               <>
@@ -158,6 +159,17 @@ export const Header: React.FC<HeaderProps> = ({
                   🚦 Semáforo de Flota
                 </button>
                 <button
+                  onClick={() => onTabChange('dispatch')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                    activeTab === 'dispatch'
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>Despacho</span>
+                </button>
+                <button
                   onClick={() => onTabChange('fleet_issues')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                     activeTab === 'fleet_issues'
@@ -187,6 +199,20 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   📋 Planes Preventivos
                 </button>
+                {/* Pestaña Personal / Usuarios para Admin o Gerente */}
+                {(currentUser?.role === 'admin' || currentUser?.role === 'fleet_manager') && (
+                  <button
+                    onClick={() => onTabChange('users')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      activeTab === 'users'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Personal</span>
+                  </button>
+                )}
               </>
             )}
           </nav>
@@ -226,11 +252,12 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={handleResetData}
               disabled={resetting}
               className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
+              title="Restablecer datos"
             >
               <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Dropdown de Selección de Usuario */}
+            {/* Dropdown de Usuario / Salir */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
@@ -270,7 +297,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <button
                           key={u.id}
                           onClick={() => {
-                            onUserChange(u);
+                            if (onUserChange) onUserChange(u);
                             setShowUserDropdown(false);
                             if (u.role === 'driver') {
                               onTabChange('driver_hub');
@@ -297,6 +324,20 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
                       );
                     })}
+
+                    {onLogout && (
+                      <div className="pt-2 border-t border-slate-800 mt-1">
+                        <button
+                          onClick={() => {
+                            setShowUserDropdown(false);
+                            onLogout();
+                          }}
+                          className="w-full flex items-center gap-2 p-2 rounded-lg text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 transition"
+                        >
+                          🚪 Cerrar Sesión
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

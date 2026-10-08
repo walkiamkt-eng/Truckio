@@ -4,11 +4,8 @@ import {
   Clock,
   Wrench,
   CheckCircle2,
-  ChevronRight,
   MapPin,
-  Camera,
   DollarSign,
-  User as UserIcon,
   X,
   Filter,
 } from 'lucide-react';
@@ -186,7 +183,6 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
                 ) : (
                   colIssues.map((issue) => {
                     const vehicle = vehicles.find((v) => v.id === issue.vehicle_id);
-                    const reporter = users.find((u) => u.id === issue.reported_by_user_id);
 
                     return (
                       <div
@@ -248,12 +244,6 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
 
                         <div className="flex items-center justify-between text-[10px] text-slate-500 mt-2.5 pt-1.5 border-t border-slate-900">
                           <span>{new Date(issue.created_at).toLocaleDateString('es-AR')}</span>
-                          {issue.attachments && issue.attachments.length > 0 && (
-                            <span className="flex items-center gap-1 text-slate-400">
-                              <Camera className="w-3 h-3" />
-                              {issue.attachments.length} foto(s)
-                            </span>
-                          )}
                         </div>
                       </div>
                     );
@@ -340,31 +330,6 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
                   </span>
                 </div>
               </div>
-
-              {/* Photos Gallery */}
-              {selectedIssue.attachments && selectedIssue.attachments.length > 0 && (
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block mb-2 flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5 text-amber-400" />
-                    Fotos de Evidencia ({selectedIssue.attachments.length})
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {selectedIssue.attachments.map((att, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-xl overflow-hidden border border-slate-800 aspect-video bg-black"
-                      >
-                        <img
-                          src={att.file_url}
-                          alt="Evidencia daño"
-                          className="w-full h-full object-cover cursor-pointer hover:scale-105 transition"
-                          onClick={() => window.open(att.file_url, '_blank')}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Workshop & Cost Assignment Section */}
               <div className="pt-3 border-t border-slate-800 space-y-3 bg-slate-950/80 p-4 rounded-2xl border">

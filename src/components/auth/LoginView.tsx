@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Truck, Lock, Mail, AlertCircle } from 'lucide-react';
 import { AuthService } from "../../services/authService";
+import { supabase } from "../../lib/supabase";
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
@@ -24,6 +25,21 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       setErrorMsg(err.message || 'Error al iniciar sesión. Verifica tus credenciales.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al iniciar sesión con Google.');
     }
   };
 
@@ -86,6 +102,29 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {loading ? 'Ingresando...' : 'Iniciar Sesión'}
           </button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-800"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-slate-900 px-3 text-slate-500 font-mono">O continúa con</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full flex items-center justify-center gap-3 bg-slate-950 hover:bg-slate-800 text-white font-medium py-2.5 rounded-xl border border-slate-800 transition active:scale-95 text-sm"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.2 9 5 12 5z"/>
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z"/>
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.2-6.4-5.2L1.9 16C3.7 19.7 7.5 22.3 12 23z"/>
+          </svg>
+          Iniciar sesión con Google
+        </button>
       </div>
     </div>
   );
