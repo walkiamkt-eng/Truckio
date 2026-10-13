@@ -29,7 +29,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
 
   // Formulario Edición de Usuario
   const [editRole, setEditRole] = useState<UserRole>('driver');
-  const [editFullName, setEditFullName] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
@@ -73,7 +72,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
   const handleOpenEditModal = (userToEdit: User) => {
     setEditingUser(userToEdit);
     setEditRole(userToEdit.role);
-    setEditFullName(userToEdit.full_name || '');
     setAdminPassword('');
     setError(null);
   };
@@ -296,14 +294,21 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">Contraseña Inicial (Opcional)</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">
+                  Contraseña Inicial
+                </label>
                 <input
                   type="password"
+                  required
+                  minLength={6}
                   value={createFormData.password}
                   onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
-                  placeholder="Dejar en blanco para Google Sign-In"
+                  placeholder="Mínimo 6 caracteres (ej. Truckio2026*)"
                   className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Esta será la contraseña con la que el nuevo usuario iniciará sesión en la app.
+                </p>
               </div>
 
               <div>

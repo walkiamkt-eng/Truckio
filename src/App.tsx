@@ -17,7 +17,6 @@ import { DispatchView } from './components/dispatch/DispatchView';
 import { AuthService } from './services/authService';
 import { StorageService, TRUCKIO_STATE_CHANGED } from './services/storageService';
 import { NotificationService } from './services/notificationService';
-import { INITIAL_USERS } from './db/indexedDB';
 import { supabase } from './lib/supabase';
 import type {
   User,
@@ -31,7 +30,7 @@ import { Loader2, Truck, Building2, User as UserIcon, Mail, Lock, Ticket, ArrowR
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<User[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [plans, setPlans] = useState<MaintenancePlan[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -86,10 +85,11 @@ export default function App() {
         StorageService.getIssues(tenantId),
       ]);
 
+      // CORRECCIÓN: Asignar estrictamente los usuarios obtenidos de Supabase o asegurando al usuario actual si no hay más
       if (Array.isArray(u) && u.length > 0) {
         setUsers(u);
       } else {
-        setUsers([currentUser]);
+        setUsers(currentUser ? [currentUser] : []);
       }
 
       setVehicles(v || []);
