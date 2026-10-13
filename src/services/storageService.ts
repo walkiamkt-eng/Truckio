@@ -3,7 +3,6 @@ import {
   db,
   seedDatabaseIfEmpty,
   DEFAULT_TENANT_ID,
-  INITIAL_USERS,
 } from '../db/indexedDB.ts';
 import type {
   Vehicle,
@@ -108,31 +107,39 @@ export class StorageService {
   // --- USERS ---
   public static async getUsers(tenantId?: string): Promise<User[]> {
     const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
+    
     if (isEffectivelyOffline()) {
       await this.init();
       const localUsers = await db.users.where('tenant_id').equals(validTenantId).toArray();
-      return localUsers.length > 0 ? localUsers : INITIAL_USERS;
+      return localUsers;
     }
+
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('tenant_id', validTenantId);
-      if (error || !data || data.length === 0) {
-        await this.init();
-        const localUsers = await db.users.where('tenant_id').equals(validTenantId).toArray();
-        return localUsers.length > 0 ? localUsers : INITIAL_USERS;
+      // Consulta directa a la tabla real 'users' filtrada por tenant_id
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('tenant_id', validTenantId);
+
+      if (error || !data) {
+        console.error('Error al obtener usuarios de Supabase:', error?.message);
+        return [];
       }
+
       const mappedUsers: User[] = data.map((p) => ({
         id: p.id,
         tenant_id: p.tenant_id,
         email: p.email || '',
         full_name: p.full_name,
         role: p.role,
+        phone: p.phone,
       }));
+
       await db.users.bulkPut(mappedUsers);
       return mappedUsers;
-    } catch {
-      await this.init();
-      const localUsers = await db.users.where('tenant_id').equals(validTenantId).toArray();
-      return localUsers.length > 0 ? localUsers : INITIAL_USERS;
+    } catch (err) {
+      console.error('Excepción al cargar usuarios:', err);
+      return [];
     }
   }
 
