@@ -15,7 +15,7 @@ export class UserService {
    */
   public static async getTenantUsers(tenantId: string): Promise<User[]> {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('full_name', { ascending: true });
@@ -43,7 +43,7 @@ export class UserService {
   public static async createUser(tenantId: string, userData: CreateUserData): Promise<void> {
     const userId = crypto.randomUUID();
 
-    const { error: profileError } = await supabase.from('profiles').insert({
+    const { error: profileError } = await supabase.from('users').insert({
       id: userId,
       tenant_id: tenantId,
       full_name: userData.full_name,
@@ -53,7 +53,7 @@ export class UserService {
     });
 
     if (profileError) {
-      console.error('Error al insertar perfil:', profileError.message);
+      console.error('Error al insertar usuario:', profileError.message);
       throw profileError;
     }
   }
@@ -63,7 +63,7 @@ export class UserService {
    */
   public static async updateUserRole(userId: string, newRole: UserRole): Promise<void> {
     const { error } = await supabase
-      .from('profiles')
+      .from('users')
       .update({ role: newRole })
       .eq('id', userId);
 
@@ -75,7 +75,7 @@ export class UserService {
    */
   public static async deleteUser(userId: string): Promise<void> {
     const { error } = await supabase
-      .from('profiles')
+      .from('users')
       .delete()
       .eq('id', userId);
 

@@ -22,25 +22,25 @@ export class AuthService {
     if (error) throw error;
   }
 
-  // Obtener usuario/perfil actual desde Supabase Auth + tabla profiles
+  // Obtener usuario/perfil actual desde Supabase Auth + tabla users
   public static async getCurrentProfile(): Promise<User | null> {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return null;
 
     // Se usa .maybeSingle() en lugar de .single() para evitar el error HTTP 406
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', user.id)
       .maybeSingle();
 
     if (profileError) {
-      console.error('Error al consultar la tabla profiles:', profileError.message);
+      console.error('Error al consultar la tabla users:', profileError.message);
       return null;
     }
 
     if (!profile) {
-      console.warn(`El usuario ${user.id} está autenticado pero no tiene un perfil registrado en la tabla 'profiles'.`);
+      console.warn(`El usuario ${user.id} está autenticado pero no tiene un perfil registrado en la tabla 'users'.`);
       return null;
     }
 
