@@ -14,6 +14,7 @@ interface HeaderProps {
   onTabChange: (tab: string) => void;
   onLogout?: () => void;
   onOpenFleetPdf?: () => void;
+  vehiclesCount: number; // <--- Añadido aquí
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,30 +25,12 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   onLogout,
   onOpenFleetPdf,
+  vehiclesCount, // <--- Recibido aquí
 }) => {
   const { isOnline, toggleSimulatedOffline } = useOnlineStatus();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [vehiclesCount, setVehiclesCount] = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadVehiclesCount = async () => {
-      try {
-        const vehicles = await StorageService.getVehicles();
-        if (isMounted && Array.isArray(vehicles)) {
-          setVehiclesCount(vehicles.length);
-        }
-      } catch (error) {
-        console.error('Error al cargar vehículos:', error);
-      }
-    };
-    loadVehiclesCount();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -66,8 +49,6 @@ export const Header: React.FC<HeaderProps> = ({
       setResetting(true);
       try {
         await StorageService.resetToDefault();
-        const vehicles = await StorageService.getVehicles();
-        if (Array.isArray(vehicles)) setVehiclesCount(vehicles.length);
         window.location.reload();
       } finally {
         setResetting(false);
