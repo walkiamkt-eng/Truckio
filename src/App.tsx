@@ -423,7 +423,7 @@ export default function App() {
       {/* Banner de Estado Offline */}
       <OfflineBanner />
 
-      {/* Header Principal con Datos del Usuario Autenticado */}
+      {/* Header Principal con Datos del Usuario Autenticado y conteo de vehículos */}
       <Header
         currentUser={currentUser}
         availableUsers={users.length > 0 ? users : [currentUser]}
@@ -431,6 +431,7 @@ export default function App() {
         onTabChange={setActiveTab}
         onLogout={handleLogout}
         onOpenFleetPdf={() => setGlobalPdfModalOpen(true)}
+        vehiclesCount={vehicles.length}
       />
 
       {/* Área Principal */}
@@ -531,7 +532,8 @@ export default function App() {
         />
       )}
 
-      {vehicleToEdit && (
+      {/* Modal de Creación o Edición de Vehículo */}
+      {vehicleToEdit !== null && (
         <VehicleModal
           vehicleToEdit={vehicleToEdit === 'new' ? null : vehicleToEdit}
           tenantId={currentUser.tenant_id}
