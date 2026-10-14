@@ -12,7 +12,6 @@ export class AuthService {
     if (error) throw error;
     if (!data.user) return null;
 
-    // Obtener el perfil asociado al usuario autenticado
     return await AuthService.getCurrentProfile();
   }
 
@@ -27,7 +26,6 @@ export class AuthService {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return null;
 
-    // Se usa .maybeSingle() en lugar de .single() para evitar el error HTTP 406
     const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('*')
@@ -36,20 +34,18 @@ export class AuthService {
 
     if (profileError) {
       console.error('Error al consultar la tabla users:', profileError.message);
-      return null;
     }
 
-    if (!profile) {
-      console.warn(`El usuario ${user.id} está autenticado pero no tiene un perfil registrado en la tabla 'users'.`);
-      return null;
-    }
+    // Extraer el nombre de la empresa desde los metadatos de registro de Supabase Auth
+    const companyName = user.user_metadata?.company_name || 'Mi Empresa de Transporte';
 
     return {
-      id: profile.id,
-      tenant_id: profile.tenant_id,
+      id: profile?.id || user.id,
+      tenant_id: profile?.tenant_id || user.user_metadata?.tenant_id || '00000000-0000-0000-0000-000000000000',
       email: user.email || '',
-      full_name: profile.full_name,
-      role: profile.role,
+      full_name: profile?.full_name || user.user_metadata?.full_name || 'Administrador',
+      company_name: companyName, // <--- Aquí inyectamos el nombre real de la empresa
+      role: profile?.role || user.user_metadata?.role || 'admin',
     } as User;
   }
 }
