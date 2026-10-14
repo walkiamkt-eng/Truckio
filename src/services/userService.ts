@@ -38,49 +38,27 @@ export class UserService {
   }
 
   /**
-   * Crea un usuario asociado al tenant.
-   * Si no se especifica contraseña, asigna una contraseña temporal inicial predeterminada.
+   * Crea un usuario asociado al tenant utilizando la función segura RPC del backend,
+   * evitando que la sesión actual del administrador se cierre o sea reemplazada.
    */
   public static async createUser(tenantId: string, userData: CreateUserData): Promise<void> {
-    // Si no ingresó clave, asignamos una clave temporal predeterminada segura
     const initialPassword = userData.password && userData.password.trim().length >= 6 
       ? userData.password.trim() 
       : 'Truckio2026*';
 
-    // 1. Intentar registrar en Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Llamada a la función RPC segura en Supabase (admin_create_user)
+    const { error: rpcError } = await supabase.rpc('admin_create_user', {
       email: userData.email.trim(),
       password: initialPassword,
-      options: {
-        data: {
-          full_name: userData.full_name.trim(),
-          role: userData.role,
-          tenant_id: tenantId,
-        },
-      },
-    });
-
-    let newUserId = authData?.user?.id;
-
-    if (authError) {
-      // Si el usuario ya existía en Auth o hubo aviso de correo, generamos UUID local seguro
-      console.warn('Registro en Auth omitido/fallido, creando en public.users:', authError.message);
-      newUserId = crypto.randomUUID();
-    }
-
-    // 2. Insertar perfil en la tabla public.users
-    const { error: profileError } = await supabase.from('users').insert({
-      id: newUserId,
-      tenant_id: tenantId,
       full_name: userData.full_name.trim(),
+      tenant_id: tenantId,
       role: userData.role,
-      email: userData.email.trim(),
-      phone: userData.phone || null,
+      phone: userData.phone?.trim() || null,
     });
 
-    if (profileError) {
-      console.error('Error al insertar usuario en public.users:', profileError.message);
-      throw profileError;
+    if (rpcError) {
+      console.error('Error al crear el usuario mediante RPC:', rpcError.message);
+      throw new Error(rpcError.message || 'No se pudo crear el usuario.');
     }
   }
 
