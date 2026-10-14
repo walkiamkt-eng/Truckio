@@ -24,14 +24,9 @@ export const PlansManager: React.FC<PlansManagerProps> = ({
   const [serviceDate, setServiceDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
 
-  const handleMarkDone = async (plan: MaintenancePlan) => {
+  const handleMarkDone = (plan: MaintenancePlan) => {
     const v = vehicles.find((veh) => veh.id === plan.vehicle_id);
-    const defaultVal =
-      plan.trigger_type === 'mileage'
-        ? v?.current_mileage || 0
-        : plan.trigger_type === 'engine_hours'
-        ? v?.current_engine_hours || 0
-        : 0;
+    const defaultVal = v?.current_km || 0;
 
     setRecordingServiceId(plan.id);
     setServiceValue(defaultVal);
@@ -92,10 +87,7 @@ export const PlansManager: React.FC<PlansManagerProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {plans.map((plan) => {
           const v = vehicles.find((veh) => veh.id === plan.vehicle_id);
-          let currentVal = 0;
-          if (v) {
-            currentVal = plan.trigger_type === 'mileage' ? v.current_mileage : v.current_engine_hours;
-          }
+          const currentVal = v?.current_km || 0;
           const nextDue = plan.last_service_value + plan.target_value;
           const remaining = nextDue - currentVal;
           const percentRemaining = plan.target_value > 0 ? (remaining / plan.target_value) * 100 : 100;
@@ -137,9 +129,9 @@ export const PlansManager: React.FC<PlansManagerProps> = ({
                 {/* Progress bar */}
                 <div className="mb-3">
                   <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                    <span>Frecuencia: cada {plan.target_value.toLocaleString()} {plan.trigger_type === 'mileage' ? 'km' : 'hs'}</span>
+                    <span>Frecuencia: cada {plan.target_value.toLocaleString()} km</span>
                     <span className="font-mono font-bold text-white">
-                      {remaining > 0 ? `Restan ${remaining.toLocaleString()}` : `Excedido por ${Math.abs(remaining).toLocaleString()}`}
+                      {remaining > 0 ? `Restan ${remaining.toLocaleString()} km` : `Excedido por ${Math.abs(remaining).toLocaleString()} km`}
                     </span>
                   </div>
                   <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -156,13 +148,13 @@ export const PlansManager: React.FC<PlansManagerProps> = ({
                   <div>
                     <span className="text-slate-500 block">Último Realizado:</span>
                     <span className="font-mono font-semibold text-slate-300">
-                      {plan.last_service_value.toLocaleString()} ({plan.last_service_date || 'Inicial'})
+                      {plan.last_service_value.toLocaleString()} km ({plan.last_service_date || 'Inicial'})
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Próximo Service:</span>
                     <span className="font-mono font-bold text-amber-400">
-                      {nextDue.toLocaleString()} {plan.trigger_type === 'mileage' ? 'km' : 'hs'}
+                      {nextDue.toLocaleString()} km
                     </span>
                   </div>
                 </div>
@@ -198,13 +190,13 @@ export const PlansManager: React.FC<PlansManagerProps> = ({
           <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 text-slate-100 shadow-2xl">
             <h3 className="text-base font-bold text-white mb-2">Registrar Service de Mantenimiento Realizado</h3>
             <p className="text-xs text-slate-400 mb-4">
-              Actualiza la fecha y lectura para resetear el contador de mantenimiento preventivo.
+              Actualiza la fecha y lectura en kilómetros para resetear el contador preventivo.
             </p>
 
             <form onSubmit={submitServiceDone} className="space-y-4 text-xs">
               <div>
                 <label className="block text-slate-300 font-bold mb-1">
-                  Kilometraje u Horas al momento del servicio *
+                  Kilometraje al momento del servicio (KM) *
                 </label>
                 <input
                   type="number"

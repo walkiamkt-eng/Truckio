@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wrench, Gauge, Clock, Calendar, CheckCircle2, X } from 'lucide-react';
+import { Wrench, Gauge, Calendar, CheckCircle2, X } from 'lucide-react';
 import { StorageService } from '../../services/storageService.ts';
 import type { Vehicle, MaintenanceTriggerType } from '../../types/truckio.ts';
 
@@ -77,7 +77,7 @@ export const MaintenancePlanModal: React.FC<MaintenancePlanModalProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">Nueva Regla de Mantenimiento Preventivo</h3>
-              <p className="text-xs text-slate-400">Control semafórico por kilometraje, horas o calendario</p>
+              <p className="text-xs text-slate-400">Control semafórico por kilometraje o calendario</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
@@ -104,14 +104,14 @@ export const MaintenancePlanModal: React.FC<MaintenancePlanModalProps> = ({
                 setVehicleId(nextId);
                 const veh = vehicles.find((v) => v.id === nextId);
                 if (veh && triggerType === 'mileage') {
-                  setLastServiceValue(veh.current_mileage);
+                  setLastServiceValue(veh.current_km || 0);
                 }
               }}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
             >
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
-                  [{v.license_plate}] {v.brand} {v.model} ({v.current_mileage.toLocaleString()} km)
+                  [{v.license_plate}] {v.brand} {v.model} ({(v.current_km || 0).toLocaleString()} km)
                 </option>
               ))}
             </select>
@@ -122,13 +122,13 @@ export const MaintenancePlanModal: React.FC<MaintenancePlanModalProps> = ({
             <label className="block text-slate-300 font-bold mb-1.5 uppercase tracking-wider text-[11px]">
               Disparador de la Regla (Trigger)
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setTriggerType('mileage');
-                  if (targetValue === 500 || targetValue === 365) setTargetValue(40000);
-                  if (selectedVehicle) setLastServiceValue(selectedVehicle.current_mileage);
+                  if (targetValue === 365) setTargetValue(40000);
+                  if (selectedVehicle) setLastServiceValue(selectedVehicle.current_km || 0);
                 }}
                 className={`p-2.5 rounded-xl font-bold flex flex-col items-center justify-center border text-center transition ${
                   triggerType === 'mileage'
@@ -137,31 +137,14 @@ export const MaintenancePlanModal: React.FC<MaintenancePlanModalProps> = ({
                 }`}
               >
                 <Gauge className="w-4 h-4 mb-1" />
-                <span>Kilómetros</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setTriggerType('engine_hours');
-                  if (targetValue === 40000 || targetValue === 365) setTargetValue(500);
-                  if (selectedVehicle) setLastServiceValue(selectedVehicle.current_engine_hours);
-                }}
-                className={`p-2.5 rounded-xl font-bold flex flex-col items-center justify-center border text-center transition ${
-                  triggerType === 'engine_hours'
-                    ? 'bg-amber-500 text-slate-950 border-amber-400'
-                    : 'bg-slate-800 text-slate-300 border-slate-700'
-                }`}
-              >
-                <Clock className="w-4 h-4 mb-1" />
-                <span>Horas Motor</span>
+                <span>Kilómetros (KM)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setTriggerType('time_interval');
-                  if (targetValue === 40000 || targetValue === 500) setTargetValue(365);
+                  if (targetValue === 40000) setTargetValue(365);
                   setLastServiceValue(0);
                 }}
                 className={`p-2.5 rounded-xl font-bold flex flex-col items-center justify-center border text-center transition ${
@@ -171,7 +154,7 @@ export const MaintenancePlanModal: React.FC<MaintenancePlanModalProps> = ({
                 }`}
               >
                 <Calendar className="w-4 h-4 mb-1" />
-                <span>Días (Tiempo)</span>
+                <span>Días (Calendario)</span>
               </button>
             </div>
           </div>
@@ -184,7 +167,7 @@ export const MaintenancePlanModal: React.FC<MaintenancePlanModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Ej: Cambio de Aceite Sintético y Filtros, Rotación de Neumáticos, VTV Anual"
+              placeholder="Ej: Cambio de Aceite Sintético, Rotación de Neumáticos, VTV"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
@@ -207,7 +190,7 @@ export const MaintenancePlanModal: React.FC<MaintenancePlanModalProps> = ({
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold font-mono text-white focus:outline-none focus:border-amber-500"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-bold">
-                  {triggerType === 'mileage' ? 'KM' : triggerType === 'engine_hours' ? 'HS' : 'DÍAS'}
+                  {triggerType === 'mileage' ? 'KM' : 'DÍAS'}
                 </span>
               </div>
             </div>
