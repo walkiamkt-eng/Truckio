@@ -8,9 +8,12 @@ import { Header } from './components/common/Header';
 import { OfflineBanner } from './components/common/OfflineBanner';
 import { DriverView } from './components/driver/DriverView';
 import { FleetDashboard } from './components/fleet/FleetDashboard';
+import { FleetTableView } from './components/fleet/FleetTableView';
 import { IncidentBoard } from './components/fleet/IncidentBoard';
 import { PlansManager } from './components/fleet/PlansManager';
 import { FleetReportPDFModal } from './components/fleet/FleetReportPDFModal';
+import { PrintableDossier } from './components/fleet/PrintableDossier';
+import { VehicleModal } from './components/fleet/VehicleModal';
 import { LoginView } from './components/auth/LoginView';
 import { UserManagementView } from './components/users/UserManagementView';
 import { DispatchView } from './components/dispatch/DispatchView';
@@ -37,6 +40,10 @@ export default function App() {
   const [healthMap, setHealthMap] = useState<Record<string, VehicleMaintenanceHealth>>({});
   const [activeTab, setActiveTab] = useState<string>('driver_hub');
   const [globalPdfModalOpen, setGlobalPdfModalOpen] = useState(false);
+
+  // Estados globales para modales de vehículos (Dossier y Edición/Creación)
+  const [dossierVehicle, setDossierVehicle] = useState<Vehicle | null>(null);
+  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null | 'new'>(null);
 
   // Estado para alternar entre Login y Registro de Empresa (SaaS)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -85,7 +92,6 @@ export default function App() {
         StorageService.getIssues(tenantId),
       ]);
 
-      // CORRECCIÓN: Asignar estrictamente los usuarios obtenidos de Supabase o asegurando al usuario actual si no hay más
       if (Array.isArray(u) && u.length > 0) {
         setUsers(u);
       } else {
@@ -135,7 +141,6 @@ export default function App() {
 
     initSession();
 
-    // Suscripción a cambios de autenticación (Login, Logout, Token Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         await checkSession();
@@ -155,7 +160,6 @@ export default function App() {
     };
   }, [checkSession]);
 
-  // Carga de datos cuando el usuario está autenticado y manejo de eventos online / sync
   useEffect(() => {
     if (currentUser) {
       loadData();
@@ -184,7 +188,6 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Manejador del Registro SaaS de Administrador + Empresa + Código Promo
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError(null);
@@ -212,7 +215,6 @@ export default function App() {
         '¡Registro exitoso! Tu empresa ha sido creada con la membresía activa.'
       );
 
-      // Limpiar formulario y verificar sesión automáticamente
       setTimeout(async () => {
         await checkSession();
       }, 1500);
@@ -238,13 +240,11 @@ export default function App() {
     );
   }
 
-  // Si no hay sesión iniciada, mostramos la pantalla de Autenticación (Login o Registro SaaS)
   if (!currentUser) {
     if (authMode === 'register') {
       return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans text-slate-100">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-            {/* Adorno superior */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600" />
 
             <div className="flex flex-col items-center text-center mb-6">
@@ -466,7 +466,7 @@ export default function App() {
           </>
         ) : (
           <>
-            {(activeTab === 'fleet_health' || activeTab === 'fleet_vehicles') && (
+            {activeTab === 'fleet_health' && (
               <FleetDashboard
                 currentUser={currentUser}
                 vehicles={vehicles}
@@ -474,6 +474,16 @@ export default function App() {
                 issues={issues}
                 healthMap={healthMap}
                 onRefresh={loadData}
+              />
+            )}
+            {activeTab === 'fleet_vehicles' && (
+              <FleetTableView
+                currentUser={currentUser}
+                vehicles={vehicles}
+                healthMap={healthMap}
+                onRefresh={loadData}
+                onEditVehicle={(veh) => setVehicleToEdit(veh)}
+                onOpenDossier={(veh) => setDossierVehicle(veh)}
               />
             )}
             {activeTab === 'dispatch' && (
@@ -509,6 +519,29 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Modales Globales de Dossier y Edición de Vehículo */}
+      {dossierVehicle && (
+        <PrintableDossier
+          vehicle={dossierVehicle}
+          plans={plans.filter((p) => p.vehicle_id === dossierVehicle.id)}
+          issues={issues}
+          health={healthMap[dossierVehicle.id]}
+          onClose={() => setDossierVehicle(null)}
+        />
+      )}
+
+      {vehicleToEdit && (
+        <VehicleModal
+          vehicleToEdit={vehicleToEdit === 'new' ? null : vehicleToEdit}
+          tenantId={currentUser.tenant_id}
+          onClose={() => setVehicleToEdit(null)}
+          onSuccess={() => {
+            setVehicleToEdit(null);
+            loadData();
+          }}
+        />
+      )}
 
       {/* Modal para Generar Informe PDF */}
       {globalPdfModalOpen && (
