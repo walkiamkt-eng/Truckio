@@ -54,10 +54,18 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
 
-  // Semaphoric counts
-  const greenCount = vehicles.filter((v) => healthMap[v.id]?.status === 'green').length;
-  const yellowCount = vehicles.filter((v) => healthMap[v.id]?.status === 'yellow').length;
-  const redCount = vehicles.filter((v) => healthMap[v.id]?.status === 'red').length;
+  // Fallback seguro de salud por si algún vehículo no está en el map
+  const defaultHealth: VehicleMaintenanceHealth = {
+    status: 'green',
+    score: 100,
+    reason: 'Unidad en óptimas condiciones',
+    minRemainingPercentage: 100,
+  };
+
+  // Semaphoric counts seguros
+  const greenCount = vehicles.filter((v) => (healthMap[v.id] || defaultHealth).status === 'green').length;
+  const yellowCount = vehicles.filter((v) => (healthMap[v.id] || defaultHealth).status === 'yellow').length;
+  const redCount = vehicles.filter((v) => (healthMap[v.id] || defaultHealth).status === 'red').length;
   const stoppedUnitsCount = issues.filter((i) => i.mobility === 'stopped' && i.status !== 'resolved').length;
 
   const totalCost = issues.reduce((acc, curr) => acc + (curr.repair_cost || 0), 0);
@@ -65,7 +73,8 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
   // Filtered vehicles
   const filteredVehicles = vehicles.filter((v) => {
     if (filterType !== 'all' && v.type !== filterType) return false;
-    const h = healthMap[v.id]?.status || 'green';
+    const health = healthMap[v.id] || defaultHealth;
+    const h = health.status || 'green';
     if (filterHealth !== 'all' && h !== filterHealth) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -177,7 +186,7 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
           </span>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-xl sm:text-2xl font-black text-amber-400 font-mono">
-              ${totalCost.toLocaleString('es-AR')}
+              ${(totalCost ?? 0).toLocaleString('es-AR')}
             </span>
             <span className="text-xs text-slate-400">ARS</span>
           </div>
@@ -284,7 +293,7 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
       {/* Fleet Vehicles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredVehicles.map((vehicle) => {
-          const health = healthMap[vehicle.id];
+          const health = healthMap[vehicle.id] || defaultHealth;
           const vehicleActiveIssues = issues.filter(
             (i) => i.vehicle_id === vehicle.id && i.status !== 'resolved'
           );
@@ -294,9 +303,9 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
             <div
               key={vehicle.id}
               className={`bg-slate-900 border rounded-2xl p-5 text-slate-100 flex flex-col justify-between transition shadow-md ${
-                health?.status === 'red'
+                health.status === 'red'
                   ? 'border-red-500/50 shadow-red-950/20'
-                  : health?.status === 'yellow'
+                  : health.status === 'yellow'
                   ? 'border-amber-500/50 shadow-amber-950/20'
                   : 'border-slate-800 hover:border-slate-700'
               }`}
@@ -321,7 +330,6 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
 
                   {/* Semaphoric Status Pill */}
                   <div className="flex items-center gap-2">
-                    {/* Indicador de activo / inactivo */}
                     {vehicle.is_active === false && (
                       <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 text-[10px] font-bold">
                         Inactivo
@@ -329,26 +337,26 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
                     )}
                     <span
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                        health?.status === 'green'
+                        health.status === 'green'
                           ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                          : health?.status === 'yellow'
+                          : health.status === 'yellow'
                           ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
                           : 'bg-red-500/15 border-red-500/30 text-red-400 animate-pulse'
                       }`}
                     >
                       <span
                         className={`w-2 h-2 rounded-full ${
-                          health?.status === 'green'
+                          health.status === 'green'
                             ? 'bg-emerald-400'
-                            : health?.status === 'yellow'
+                            : health.status === 'yellow'
                             ? 'bg-amber-400'
                             : 'bg-red-400'
                         }`}
                       />
                       <span>
-                        {health?.status === 'green'
+                        {health.status === 'green'
                           ? 'En Regla (>15%)'
-                          : health?.status === 'yellow'
+                          : health.status === 'yellow'
                           ? 'Alerta (≤15%)'
                           : isStopped
                           ? 'Unidad Parada'
@@ -369,9 +377,9 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
                 {/* Metrics */}
                 <div className="grid grid-cols-1 gap-2 my-3 p-3 bg-slate-950/70 rounded-xl border border-slate-800/80">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Kilometraje Inicial (KM)</span>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Kilometraje Actual (KM)</span>
                     <span className="font-mono font-bold text-sm text-white">
-                      {(vehicle.current_km || 0).toLocaleString()} km
+                      {(vehicle.current_km ?? 0).toLocaleString('es-AR')} km
                     </span>
                   </div>
                 </div>
@@ -381,19 +389,19 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
                   <div className="flex items-center justify-between text-slate-400 mb-1">
                     <span className="text-[11px] font-semibold">Estado de Mantenimiento:</span>
                     <span className="font-mono font-bold text-[11px] text-slate-300">
-                      Margen: {health?.minRemainingPercentage}%
+                      Margen: {health.minRemainingPercentage}%
                     </span>
                   </div>
                   <p
                     className={`text-[11px] p-2 rounded-lg leading-snug ${
-                      health?.status === 'green'
+                      health.status === 'green'
                         ? 'bg-emerald-500/10 text-emerald-300'
-                        : health?.status === 'yellow'
+                        : health.status === 'yellow'
                         ? 'bg-amber-500/10 text-amber-300'
                         : 'bg-red-500/10 text-red-300 font-semibold'
                     }`}
                   >
-                    {health?.reason}
+                    {health.reason}
                   </p>
                 </div>
 
@@ -444,7 +452,7 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
           vehicle={dossierVehicle}
           plans={plans.filter((p) => p.vehicle_id === dossierVehicle.id)}
           issues={issues}
-          health={healthMap[dossierVehicle.id]}
+          health={healthMap[dossierVehicle.id] || defaultHealth}
           onClose={() => setDossierVehicle(null)}
         />
       )}
