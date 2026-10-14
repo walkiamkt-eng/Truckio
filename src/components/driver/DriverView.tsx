@@ -21,14 +21,17 @@ export const DriverView: React.FC<DriverViewProps> = ({
 }) => {
   const assignedVehicle = vehicles.find((v) => v.assigned_driver_id === currentUser.id) || vehicles[0] || null;
 
-  const [mileage, setMileage] = useState<number | ''>(assignedVehicle?.current_mileage || '');
-  const [hours, setHours] = useState<number | ''>(assignedVehicle?.current_engine_hours || '');
+  const currentKm = assignedVehicle?.current_km ?? 0;
+  const currentHours = assignedVehicle?.current_engine_hours ?? 0;
+
+  const [mileage, setMileage] = useState<number | ''>(currentKm);
+  const [hours, setHours] = useState<number | ''>(currentHours);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const handleUpdateOdometer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignedVehicle || mileage === '' || hours === '') return;
+    if (!assignedVehicle || mileage === '') return;
 
     setLoading(true);
     setMessage(null);
@@ -36,10 +39,9 @@ export const DriverView: React.FC<DriverViewProps> = ({
       await StorageService.updateOdometerAndHours(
         assignedVehicle.id,
         Number(mileage),
-        Number(hours),
         currentUser.id
       );
-      setMessage('✅ Odómetro y horas actualizados correctamente');
+      setMessage('✅ Lecturas actualizadas correctamente');
       if (onRefreshData) onRefreshData();
     } catch (err: any) {
       setMessage(`❌ Error: ${err.message || 'No se pudo actualizar'}`);
@@ -79,14 +81,14 @@ export const DriverView: React.FC<DriverViewProps> = ({
             <div>
               <div className="text-[10px] text-slate-400 font-semibold uppercase">Kilometraje</div>
               <div className="text-base font-bold text-slate-200 font-mono">
-                {assignedVehicle.current_mileage.toLocaleString()} km
+                {currentKm.toLocaleString('es-AR')} km
               </div>
             </div>
             <div className="border-r border-slate-800" />
             <div>
               <div className="text-[10px] text-slate-400 font-semibold uppercase">Horómetro</div>
               <div className="text-base font-bold text-slate-200 font-mono">
-                {assignedVehicle.current_engine_hours.toLocaleString()} hrs
+                {currentHours.toLocaleString('es-AR')} hrs
               </div>
             </div>
           </div>
@@ -109,11 +111,11 @@ export const DriverView: React.FC<DriverViewProps> = ({
                 </label>
                 <input
                   type="number"
-                  min={assignedVehicle.current_mileage}
+                  min={currentKm}
                   value={mileage}
                   onChange={(e) => setMileage(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono focus:border-amber-500 focus:outline-none"
-                  placeholder={assignedVehicle.current_mileage.toString()}
+                  placeholder={currentKm.toString()}
                   required
                 />
               </div>
@@ -124,11 +126,11 @@ export const DriverView: React.FC<DriverViewProps> = ({
                 </label>
                 <input
                   type="number"
-                  min={assignedVehicle.current_engine_hours}
+                  min={currentHours}
                   value={hours}
                   onChange={(e) => setHours(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono focus:border-amber-500 focus:outline-none"
-                  placeholder={assignedVehicle.current_engine_hours.toString()}
+                  placeholder={currentHours.toString()}
                   required
                 />
               </div>
