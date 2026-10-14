@@ -26,7 +26,6 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
   const [year, setYear] = useState<number | ''>(vehicleToEdit?.year || 2023);
   const [vin, setVin] = useState(vehicleToEdit?.vin || '');
   const [mileage, setMileage] = useState<number | ''>(vehicleToEdit?.current_mileage || 0);
-  const [engineHours, setEngineHours] = useState<number | ''>(vehicleToEdit?.current_engine_hours || 0);
   const [notes, setNotes] = useState(vehicleToEdit?.notes || '');
   const [isActive, setIsActive] = useState<boolean>(vehicleToEdit?.is_active ?? true);
   const [saving, setSaving] = useState(false);
@@ -46,32 +45,24 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
     setSaving(true);
     setError(null);
     try {
+      const vehicleDataPayload = {
+        type,
+        license_plate: licensePlate.trim().toUpperCase(),
+        brand: brand.trim().toUpperCase(),
+        model: model.trim().toUpperCase(),
+        year: year === '' ? undefined : Number(year),
+        vin: vin.trim() ? vin.trim().toUpperCase() : undefined,
+        current_mileage: mileage === '' ? 0 : Number(mileage),
+        notes: notes.trim() ? notes.trim().toUpperCase() : undefined,
+        is_active: isActive,
+      };
+
       if (isEditing && vehicleToEdit) {
-        await StorageService.updateVehicle(vehicleToEdit.id, {
-          type,
-          license_plate: licensePlate.trim().toUpperCase(),
-          brand: brand.trim(),
-          model: model.trim(),
-          year: year === '' ? undefined : Number(year),
-          vin: vin.trim() || undefined,
-          current_mileage: mileage === '' ? 0 : Number(mileage),
-          current_engine_hours: engineHours === '' ? 0 : Number(engineHours),
-          notes: notes.trim() || undefined,
-          is_active: isActive,
-        });
+        await StorageService.updateVehicle(vehicleToEdit.id, vehicleDataPayload);
       } else {
         await StorageService.createVehicle({
           tenant_id: tenantId,
-          type,
-          license_plate: licensePlate.trim().toUpperCase(),
-          brand: brand.trim(),
-          model: model.trim(),
-          year: year === '' ? undefined : Number(year),
-          vin: vin.trim() || undefined,
-          current_mileage: mileage === '' ? 0 : Number(mileage),
-          current_engine_hours: engineHours === '' ? 0 : Number(engineHours),
-          notes: notes.trim() || undefined,
-          is_active: isActive,
+          ...vehicleDataPayload,
         });
       }
 
@@ -155,7 +146,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 placeholder="Ej: AE 482 OK"
                 value={licensePlate}
                 onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold font-mono text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold font-mono text-white focus:outline-none focus:border-amber-500 uppercase"
               />
             </div>
             <div>
@@ -183,10 +174,10 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="Ej: Scania, Volvo, Randon"
+                placeholder="Ej: SCANIA, VOLVO"
                 value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                onChange={(e) => setBrand(e.target.value.toUpperCase())}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 uppercase"
               />
             </div>
             <div>
@@ -196,41 +187,26 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="Ej: R450 6x2, B-Train 52m3"
+                placeholder="Ej: R450 6X2"
                 value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                onChange={(e) => setModel(e.target.value.toUpperCase())}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 uppercase"
               />
             </div>
           </div>
 
-          {/* Odómetro inicial y Horas Motor */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
-                Kilometraje Inicial (km)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={mileage}
-                onChange={(e) => setMileage(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
-                Horas Motor (hs)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={engineHours}
-                onChange={(e) => setEngineHours(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
-              />
-            </div>
+          {/* Odómetro inicial */}
+          <div>
+            <label className="block text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
+              Kilometraje Inicial (km)
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={mileage}
+              onChange={(e) => setMileage(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+            />
           </div>
 
           {/* VIN & Notas */}
@@ -243,7 +219,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               placeholder="Ej: 9BS8482OK6612984"
               value={vin}
               onChange={(e) => setVin(e.target.value.toUpperCase())}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500 uppercase"
             />
           </div>
 
@@ -255,8 +231,8 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               rows={2}
               placeholder="Ruta asignada, tipo de carrocería, etc."
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
+              onChange={(e) => setNotes(e.target.value.toUpperCase())}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 resize-none uppercase"
             />
           </div>
 
