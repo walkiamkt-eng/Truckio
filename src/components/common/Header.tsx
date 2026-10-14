@@ -90,6 +90,9 @@ export const Header: React.FC<HeaderProps> = ({
     return u.full_name || (u as any).name || 'Usuario';
   };
 
+  // Obtener de forma dinámica el nombre de la empresa del usuario actual
+  const companyName = (currentUser as any)?.company_name || 'Mi Empresa de Transporte';
+
   const filteredUsers = availableUsers.filter((u) => {
     if (currentUser?.role === 'driver') {
       return u.role === 'driver';
@@ -116,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400 truncate max-w-[160px] sm:max-w-xs">
-                Transportes Aconcagua S.A.
+                {companyName}
               </p>
             </div>
           </div>
