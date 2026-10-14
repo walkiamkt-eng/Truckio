@@ -7,11 +7,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ReferenceLine,
   Cell,
 } from 'recharts';
-import { Activity, ShieldCheck, AlertTriangle, AlertOctagon, Info } from 'lucide-react';
+import { Activity, AlertTriangle, Info } from 'lucide-react';
 import type { Vehicle, VehicleMaintenanceHealth, Issue } from '../../types/truckio.ts';
 
 interface FleetHealthBarChartProps {
@@ -32,46 +31,53 @@ export const FleetHealthBarChart: React.FC<FleetHealthBarChartProps> = ({
     return v.type === filterType;
   });
 
-  // Transform data for Recharts
+  // Fallback seguro de salud
+  const defaultHealth: VehicleMaintenanceHealth = {
+    status: 'green',
+    score: 100,
+    reason: 'Unidad en óptimas condiciones',
+    minRemainingPercentage: 100,
+  };
+
+  // Transform data for Recharts (usando current_km de forma segura)
   const chartData = filteredVehicles.map((vehicle) => {
-    const health = healthMap[vehicle.id];
+    const health = healthMap[vehicle.id] || defaultHealth;
     const vehicleIssues = issues.filter(
       (i) => i.vehicle_id === vehicle.id && i.status !== 'resolved'
     );
     const hasStopped = vehicleIssues.some((i) => i.mobility === 'stopped');
 
     let category = 'Operativo';
-    let color = '#10b981'; // Green (emerald-500)
+    let color = '#10b981'; // Green
 
-    if (health?.status === 'red') {
+    if (health.status === 'red') {
       category = 'Crítico / Vencido';
-      color = '#ef4444'; // Red (red-500)
-    } else if (health?.status === 'yellow') {
+      color = '#ef4444'; // Red
+    } else if (health.status === 'yellow') {
       category = 'Alerta Mantenimiento';
-      color = '#f59e0b'; // Amber (amber-500)
+      color = '#f59e0b'; // Amber
     }
 
-    const marginPct = health ? health.minRemainingPercentage : 100;
+    const marginPct = health.minRemainingPercentage ?? 100;
+    const currentKm = vehicle.current_km ?? 0;
 
     return {
       id: vehicle.id,
       plate: vehicle.license_plate,
       fullName: `${vehicle.brand} ${vehicle.model}`,
       type: vehicle.type === 'truck' ? 'Tractor' : 'Remolque',
-      mileage: vehicle.current_mileage,
-      engineHours: vehicle.current_engine_hours,
+      mileage: currentKm,
       marginPct,
-      status: health?.status || 'green',
+      status: health.status || 'green',
       category,
       color,
       hasStopped,
       activeIssuesCount: vehicleIssues.length,
-      reason: health?.reason || 'Mantenimiento en regla',
+      reason: health.reason || 'Mantenimiento en regla',
     };
   });
 
   // Calculate comparative counts
-  const totalInView = chartData.length;
   const operativoCount = chartData.filter((d) => d.status === 'green').length;
   const mantenimientoCount = chartData.filter((d) => d.status === 'yellow').length;
   const criticoCount = chartData.filter((d) => d.status === 'red').length;
@@ -110,7 +116,7 @@ export const FleetHealthBarChart: React.FC<FleetHealthBarChartProps> = ({
 
           <div className="flex items-center justify-between">
             <span className="text-slate-400">Odómetro Actual:</span>
-            <span className="font-mono text-slate-200">{data.mileage.toLocaleString('es-AR')} km</span>
+            <span className="font-mono text-slate-200">{(data.mileage ?? 0).toLocaleString('es-AR')} km</span>
           </div>
 
           <div className="text-[11px] text-slate-400 border-t border-slate-800 pt-1.5 italic">
@@ -155,7 +161,7 @@ export const FleetHealthBarChart: React.FC<FleetHealthBarChartProps> = ({
           </div>
         </div>
 
-        {/* Filter Controls (Todos / Camiones / Remolques) */}
+        {/* Filter Controls */}
         <div className="flex items-center gap-2">
           <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1 text-xs">
             <button
@@ -245,7 +251,6 @@ export const FleetHealthBarChart: React.FC<FleetHealthBarChartProps> = ({
             />
             <Tooltip content={<CustomTooltip />} />
 
-            {/* Threshold Reference Line: 15% Maintenance Warning */}
             <ReferenceLine
               y={15}
               stroke="#f59e0b"
@@ -259,7 +264,6 @@ export const FleetHealthBarChart: React.FC<FleetHealthBarChartProps> = ({
               }}
             />
 
-            {/* Bars with dynamic fill colors based on health status */}
             <Bar dataKey="marginPct" radius={[6, 6, 0, 0]} maxBarSize={45}>
               {chartData.map((entry, index) => (
                 <Cell
