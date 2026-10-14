@@ -14,7 +14,7 @@ interface HeaderProps {
   onTabChange: (tab: string) => void;
   onLogout?: () => void;
   onOpenFleetPdf?: () => void;
-  vehiclesCount: number; // <--- Añadido aquí
+  vehiclesCount: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   onLogout,
   onOpenFleetPdf,
-  vehiclesCount, // <--- Recibido aquí
+  vehiclesCount,
 }) => {
   const { isOnline, toggleSimulatedOffline } = useOnlineStatus();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -71,8 +71,12 @@ export const Header: React.FC<HeaderProps> = ({
     return u.full_name || (u as any).name || 'Usuario';
   };
 
-  // Obtener de forma dinámica el nombre de la empresa del usuario actual
-  const companyName = (currentUser as any)?.company_name || 'Mi Empresa de Transporte';
+  // Obtener de forma robusta el nombre de la empresa (soporta metadata de Supabase y perfiles)
+  const companyName = 
+    (currentUser as any)?.company_name || 
+    (currentUser as any)?.user_metadata?.company_name || 
+    (currentUser as any)?.company || 
+    'Transportes Aconcagua S.A.';
 
   const filteredUsers = availableUsers.filter((u) => {
     if (currentUser?.role === 'driver') {
@@ -99,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
                   PWA Fleet OS
                 </span>
               </div>
-              <p className="text-xs text-slate-400 truncate max-w-[160px] sm:max-w-xs">
+              <p className="text-xs text-amber-400 font-semibold truncate max-w-[180px] sm:max-w-xs">
                 {companyName}
               </p>
             </div>
@@ -122,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => onTabChange('driver_issues')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    activeTab === 'driver_issues'
+                    activeTab === 'driver_issues' || activeTab === 'fleet_issues'
                       ? 'bg-amber-500 text-slate-950 shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }`}
@@ -183,7 +187,6 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   📋 Planes Preventivos
                 </button>
-                {/* Pestaña Personal / Usuarios para Admin o Gerente */}
                 {(currentUser?.role === 'admin' || currentUser?.role === 'fleet_manager') && (
                   <button
                     onClick={() => onTabChange('users')}

@@ -8,6 +8,7 @@ import {
   DollarSign,
   X,
   Filter,
+  Plus,
 } from 'lucide-react';
 import { StorageService } from '../../services/storageService.ts';
 import type { Issue, Vehicle, User, IssueStatus } from '../../types/truckio.ts';
@@ -18,6 +19,7 @@ interface IncidentBoardProps {
   vehicles: Vehicle[];
   users: User[];
   onRefresh: () => void;
+  currentUser?: User;
 }
 
 export const IncidentBoard: React.FC<IncidentBoardProps> = ({
@@ -25,12 +27,23 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
   vehicles,
   users,
   onRefresh,
+  currentUser,
 }) => {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [filterMobility, setFilterMobility] = useState<string>('all');
 
-  // Form fields inside transition modal
+  // Modal para nueva incidencia
+  const [newModalOpen, setNewModalOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newVehicleId, setNewVehicleId] = useState(vehicles[0]?.id || '');
+  const [newSeverity, setNewSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
+  const [newMobility, setNewMobility] = useState<'running' | 'stopped'>('running');
+  const [newCity, setNewCity] = useState('');
+  const [submittingNew, setSubmittingNew] = useState(false);
+
+  // Form fields inside detail/transition modal
   const [workshop, setWorkshop] = useState('');
   const [cost, setCost] = useState<number | ''>('');
   const [repairNotes, setRepairNotes] = useState('');
@@ -108,9 +121,45 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
     }
   };
 
+  const handleCreateIssueSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newVehicleId) return;
+
+    setSubmittingNew(true);
+    try {
+      await StorageService.createIssue({
+        tenant_id: currentUser?.tenant_id || vehicles.find(v => v.id === newVehicleId)?.tenant_id || '',
+        vehicle_id: newVehicleId,
+        reported_by_user_id: currentUser?.id || '',
+        title: newTitle.trim(),
+        description: newDescription.trim() || 'Sin detalles adicionales',
+        severity: newSeverity,
+        mobility: newMobility,
+        status: 'reported',
+        city: newCity.trim() || 'En ruta',
+      });
+
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.3 },
+      });
+
+      setNewModalOpen(false);
+      setNewTitle('');
+      setNewDescription('');
+      setNewCity('');
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al registrar incidencia: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setSubmittingNew(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Top Filter Bar */}
+      {/* Top Filter & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
         <div className="flex items-center gap-2">
           <Wrench className="w-5 h-5 text-amber-400" />
@@ -123,7 +172,15 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <button
+            onClick={() => setNewModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Reportar Incidencia</span>
+          </button>
+
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 pl-2 border-l border-slate-800">
             <Filter className="w-3.5 h-3.5" />
             <span>Filtros:</span>
           </div>
@@ -194,7 +251,6 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
                             : 'border-slate-800'
                         }`}
                       >
-                        {/* Header: License plate & mobility */}
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-mono text-xs font-black text-amber-400">
                             {vehicle?.license_plate || 'Unidad'}
@@ -218,7 +274,6 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
                           {issue.description}
                         </p>
 
-                        {/* Extra metadata */}
                         <div className="pt-2 border-t border-slate-800/80 space-y-1 text-[11px] text-slate-400">
                           {issue.city && (
                             <div className="flex items-center gap-1 truncate text-slate-400">
@@ -254,6 +309,123 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
           );
         })}
       </div>
+
+      {/* Modal para Crear Nueva Incidencia */}
+      {newModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 overflow-y-auto flex items-center justify-center animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 text-slate-100 shadow-2xl relative">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+                Reportar Nueva Incidencia o Avería
+              </h3>
+              <button
+                onClick={() => setNewModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateIssueSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Seleccionar Unidad *</label>
+                <select
+                  required
+                  value={newVehicleId}
+                  onChange={(e) => setNewVehicleId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                >
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      [{v.license_plate}] {v.brand} {v.model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Título del Problema / Falla *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Fuga de aceite en diferencial / Neumático desinflado"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Severidad *</label>
+                  <select
+                    value={newSeverity}
+                    onChange={(e: any) => setNewSeverity(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="low">Leve</option>
+                    <option value="medium">Media</option>
+                    <option value="high">Alta</option>
+                    <option value="critical">Crítica</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Estado de Marcha *</label>
+                  <select
+                    value={newMobility}
+                    onChange={(e: any) => setNewMobility(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="running">🟢 Sigue en Marcha</option>
+                    <option value="stopped">🔴 Unidad Parada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Ubicación / Ciudad actual</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Rosario, Santa Fe"
+                  value={newCity}
+                  onChange={(e) => setNewCity(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Descripción detallada</label>
+                <textarea
+                  rows={3}
+                  placeholder="Describa los síntomas o el origen de la incidencia..."
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setNewModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingNew}
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition"
+                >
+                  {submittingNew ? 'Registrando...' : 'Guardar Incidencia'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Incident Detail & Status Progression Modal */}
       {selectedIssue && (
@@ -295,7 +467,7 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
             <div className="space-y-4 text-xs">
               <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
                 <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">
-                  Descripción de la Falla Reportada por Chofer
+                  Descripción de la Falla Reportada
                 </span>
                 <p className="text-slate-300 text-xs leading-relaxed">{selectedIssue.description}</p>
               </div>
@@ -315,18 +487,14 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-500 block">Ubicación</span>
                   <span className="font-bold text-white mt-0.5 block truncate">
-                    {selectedIssue.city || 'En ruta'} {selectedIssue.state ? `(${selectedIssue.state})` : ''}
+                    {selectedIssue.city || 'En ruta'}
                   </span>
                 </div>
 
                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-500 block">Fecha de Reporte</span>
                   <span className="font-bold text-white mt-0.5 block">
-                    {new Date(selectedIssue.created_at).toLocaleDateString('es-AR')}{' '}
-                    {new Date(selectedIssue.created_at).toLocaleTimeString('es-AR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {new Date(selectedIssue.created_at).toLocaleDateString('es-AR')}
                   </span>
                 </div>
               </div>
@@ -371,7 +539,7 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
                   </label>
                   <textarea
                     rows={2}
-                    placeholder="Detalle de repuestos cambiados, mano de obra, garantía..."
+                    placeholder="Detalle de repuestos cambiados, mano de obra..."
                     value={repairNotes}
                     onChange={(e) => setRepairNotes(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
