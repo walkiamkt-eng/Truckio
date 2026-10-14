@@ -308,6 +308,30 @@ export class StorageService {
     return data;
   }
 
+  public static async recordMaintenanceServiceDone(
+    planId: string,
+    serviceValue: number,
+    serviceDate: string
+  ): Promise<void> {
+    if (isEffectivelyOffline()) {
+      await this.init();
+      const plan = await db.maintenance_plans.get(planId);
+      if (!plan) throw new Error('Plan no encontrado');
+      const updated = { ...plan, last_service_value: serviceValue, last_service_date: serviceDate };
+      await db.maintenance_plans.put(updated);
+      notifyStateChanged();
+      return;
+    }
+
+    const { error } = await supabase
+      .from('maintenance_plans')
+      .update({ last_service_value: serviceValue, last_service_date: serviceDate })
+      .eq('id', planId);
+
+    if (error) throw new Error(error.message);
+    notifyStateChanged();
+  }
+
   // --- ISSUES ---
   public static async getIssues(tenantId?: string): Promise<Issue[]> {
     const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
@@ -366,7 +390,32 @@ export class StorageService {
     }
   }
 
-  // --- CÁLCULO DE SALUD DE VEHÍCULO ---
+  public static async updateIssueStatus(
+    issueId: string,
+    status: string,
+    details?: { assigned_workshop?: string; repair_cost?: number; repair_notes?: string }
+  ): Promise<void> {
+    const payload: any = { status, ...details };
+    if (status === 'resolved') {
+      payload.resolved_at = new Date().toISOString();
+    }
+
+    if (isEffectivelyOffline()) {
+      await this.init();
+      const issue = await db.issues.get(issueId);
+      if (!issue) throw new Error('Incidencia no encontrada');
+      const updated = { ...issue, ...payload };
+      await db.issues.put(updated);
+      notifyStateChanged();
+      return;
+    }
+
+    const { error } = await supabase.from('issues').update(payload).eq('id', issueId);
+    if (error) throw new Error(error.message);
+    notifyStateChanged();
+  }
+
+  // --- CÁLCULO DE SALUD DE VEHÍCULO (CORREGIDO) ---
   public static calculateVehicleHealth(
     vehicle: Vehicle,
     plans: MaintenancePlan[] = [],
@@ -386,19 +435,28 @@ export class StorageService {
     }
 
     const vehiclePlans = plans.filter((p) => p.vehicle_id === vehicle.id);
+    const currentKm = vehicle.current_km || 0;
+
     const hasOverduePlan = vehiclePlans.some((plan) => {
-      const isMileageOverdue =
-        plan.next_service_mileage && (vehicle.current_km || 0) >= plan.next_service_mileage;
+      const nextDue = (plan.last_service_value || 0) + (plan.target_value || 0);
+      const remaining = nextDue - currentKm;
+      const percentRemaining = plan.target_value > 0 ? (remaining / plan.target_value) * 100 : 100;
+
+      const isMileageOverdue = remaining <= 0;
+      const isWarning = remaining > 0 && percentRemaining <= 15;
       const isDateOverdue =
-        plan.next_service_date && new Date(plan.next_service_date) <= new Date();
-      return isMileageOverdue || isDateOverdue;
+        plan.last_service_date &&
+        plan.trigger_type === 'time_interval' &&
+        new Date(plan.last_service_date).getTime() + (plan.target_value * 24 * 60 * 60 * 1000) <= Date.now();
+
+      return isMileageOverdue || isWarning || isDateOverdue;
     });
 
     if (hasOverduePlan) {
       return {
         status: 'WARNING',
         score: 70,
-        reason: 'Mantenimiento preventivo vencido o próximo a vencer',
+        reason: 'Mantenimiento preventivo vencido, próximo a vencer o en alerta (≤15%)',
       };
     }
 
