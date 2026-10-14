@@ -448,7 +448,7 @@ export default function App() {
                 onRefresh={loadData}
               />
             )}
-            {activeTab === 'driver_issues' && (
+            {(activeTab === 'driver_issues' || activeTab === 'fleet_issues') && (
               <div className="max-w-4xl mx-auto px-4 py-6">
                 <IncidentBoard
                   issues={issues.filter(
