@@ -21,31 +21,7 @@ interface DispatchRoute {
   estimatedArrival: string;
 }
 
-const INITIAL_DISPATCHES: DispatchRoute[] = [
-  {
-    id: 'disp-1',
-    code: 'DSP-2026-001',
-    origin: 'Terminal Central (Buenos Aires)',
-    destination: 'Depósito Aconcagua (Mendoza)',
-    driverName: 'Carlos Gómez',
-    vehiclePlate: 'AA 123 CD',
-    trailerPlate: 'R-884-XY',
-    status: 'in_transit',
-    departureTime: '06:30 HS',
-    estimatedArrival: '18:45 HS',
-  },
-  {
-    id: 'disp-2',
-    code: 'DSP-2026-002',
-    origin: 'Centro Distribución (Rosario)',
-    destination: 'Puerto Córdoba',
-    driverName: 'Matías Silva',
-    vehiclePlate: 'AB 456 EF',
-    status: 'pending',
-    departureTime: '21:00 HS',
-    estimatedArrival: '05:30 HS (+1d)',
-  },
-];
+const INITIAL_DISPATCHES: DispatchRoute[] = [];
 
 export const DispatchView: React.FC<DispatchViewProps> = ({
   currentUser,
