@@ -36,7 +36,7 @@ export class AuthService {
       console.error('Error al consultar la tabla users:', profileError.message);
     }
 
-    // Extraer el nombre de la empresa desde los metadatos de registro de Supabase Auth
+    // Extraer el nombre de la empresa ingresado en el registro (user_metadata)
     const companyName = user.user_metadata?.company_name || 'Mi Empresa de Transporte';
 
     return {
@@ -44,8 +44,7 @@ export class AuthService {
       tenant_id: profile?.tenant_id || user.user_metadata?.tenant_id || '00000000-0000-0000-0000-000000000000',
       email: user.email || '',
       full_name: profile?.full_name || user.user_metadata?.full_name || 'Administrador',
-      company_name: companyName, // <--- Aquí inyectamos el nombre real de la empresa
+      company_name: companyName, // <--- Inyectamos el nombre real de la empresa aquí
       role: profile?.role || user.user_metadata?.role || 'admin',
     } as User;
   }
-}
