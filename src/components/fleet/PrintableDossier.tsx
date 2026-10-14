@@ -105,22 +105,16 @@ export const PrintableDossier: React.FC<PrintableDossierProps> = ({
               <div>
                 <span className="text-slate-500 block text-[11px]">Estado Operativo:</span>
                 <span className="font-bold text-emerald-400 print:text-emerald-700">
-                  {vehicle.is_active ? 'Unidad Activa' : 'Baja'}
+                  {vehicle.is_active ? 'Unidad Activa' : 'Inactivo'}
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[11px]">Odómetro Registrado:</span>
+                <span className="text-slate-500 block text-[11px]">Kilometraje Inicial (KM):</span>
                 <span className="font-mono font-black text-sm text-amber-400 print:text-black">
-                  {vehicle.current_mileage.toLocaleString()} km
+                  {(vehicle.current_km || 0).toLocaleString()} km
                 </span>
               </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">Horas Motor Totales:</span>
-                <span className="font-mono font-black text-sm text-blue-400 print:text-black">
-                  {vehicle.current_engine_hours.toLocaleString()} hs
-                </span>
-              </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <span className="text-slate-500 block text-[11px]">Destino / Notas de Operación:</span>
                 <span className="text-slate-300 print:text-slate-800 italic">
                   {vehicle.notes || 'Asignado a corredor troncal nacional.'}
@@ -139,8 +133,7 @@ export const PrintableDossier: React.FC<PrintableDossierProps> = ({
             ) : (
               <div className="space-y-2 text-xs">
                 {plans.map((p) => {
-                  const currentVal =
-                    p.trigger_type === 'mileage' ? vehicle.current_mileage : vehicle.current_engine_hours;
+                  const currentVal = vehicle.current_km || 0;
                   const nextDue = p.last_service_value + p.target_value;
                   const remaining = nextDue - currentVal;
                   const isOverdue = remaining <= 0;
@@ -153,8 +146,7 @@ export const PrintableDossier: React.FC<PrintableDossierProps> = ({
                       <div>
                         <div className="font-bold text-white print:text-black">{p.title}</div>
                         <div className="text-[11px] text-slate-400 print:text-slate-600">
-                          Frecuencia: cada {p.target_value.toLocaleString()}{' '}
-                          {p.trigger_type === 'mileage' ? 'km' : 'hs'} | Último:{' '}
+                          Frecuencia: cada {p.target_value.toLocaleString()} km | Último:{' '}
                           {p.last_service_value.toLocaleString()} ({p.last_service_date || 'Inicial'})
                         </div>
                       </div>
@@ -169,10 +161,10 @@ export const PrintableDossier: React.FC<PrintableDossierProps> = ({
                               : 'bg-emerald-500/20 text-emerald-400 print:text-emerald-700'
                           }`}
                         >
-                          {isOverdue ? '¡VENCIDO!' : `Resta: ${remaining.toLocaleString()}`}
+                          {isOverdue ? '¡VENCIDO!' : `Resta: ${remaining.toLocaleString()} km`}
                         </span>
                         <div className="text-[10px] text-slate-500 print:text-slate-600">
-                          Próximo a los {nextDue.toLocaleString()}
+                          Próximo a los {nextDue.toLocaleString()} km
                         </div>
                       </div>
                     </div>
@@ -219,12 +211,12 @@ export const PrintableDossier: React.FC<PrintableDossierProps> = ({
             <div>
               <div className="h-16 border-b border-dashed border-slate-600 print:border-slate-400" />
               <p className="font-bold text-slate-300 print:text-black mt-2">Responsable de Mantenimiento</p>
-              <p className="text-[11px] text-slate-500 print:text-slate-600">Ing. Mariana Rossi — Gestora de Flota</p>
+              <p className="text-[11px] text-slate-500 print:text-slate-600">Gestoría de Flota</p>
             </div>
             <div>
               <div className="h-16 border-b border-dashed border-slate-600 print:border-slate-400" />
               <p className="font-bold text-slate-300 print:text-black mt-2">Chofer / Receptor Técnico</p>
-              <p className="text-[11px] text-slate-500 print:text-slate-600">Conformidad de Estado y Odómetro</p>
+              <p className="text-[11px] text-slate-500 print:text-slate-600">Conformidad de Estado y Kilometraje</p>
             </div>
           </div>
         </div>
