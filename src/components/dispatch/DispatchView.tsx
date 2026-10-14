@@ -21,10 +21,10 @@ interface DispatchRoute {
   estimatedArrival: string;
 }
 
+// Inicializamos la lista vacía para producción
 const INITIAL_DISPATCHES: DispatchRoute[] = [];
 
 export const DispatchView: React.FC<DispatchViewProps> = ({
-  currentUser,
   vehicles = [],
   users = [],
 }) => {
@@ -167,61 +167,69 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
         ))}
       </div>
 
-      {/* Grilla de despachos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDispatches.map((item) => (
-          <div
-            key={item.id}
-            className="bg-slate-900 border border-slate-800 hover:border-slate-700 p-5 rounded-2xl space-y-4 transition"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs text-slate-400 font-bold">{item.code}</span>
-              {getStatusBadge(item.status)}
-            </div>
-
-            <div className="space-y-2 border-y border-slate-800 py-3">
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Origen</p>
-                  <p className="text-xs font-semibold text-slate-200">{item.origin}</p>
-                </div>
+      {/* Grilla de despachos o Estado Vacío */}
+      {filteredDispatches.length === 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400">
+          <Navigation className="w-10 h-10 mx-auto text-slate-600 mb-3" />
+          <p className="text-sm font-semibold text-slate-300">No hay despachos de ruta registrados.</p>
+          <p className="text-xs text-slate-500 mt-1">Haz clic en "Nuevo Despacho" para crear la primera asignación.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredDispatches.map((item) => (
+            <div
+              key={item.id}
+              className="bg-slate-900 border border-slate-800 hover:border-slate-700 p-5 rounded-2xl space-y-4 transition"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-slate-400 font-bold">{item.code}</span>
+                {getStatusBadge(item.status)}
               </div>
 
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Destino</p>
-                  <p className="text-xs font-semibold text-slate-200">{item.destination}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60 space-y-1">
-                <span className="text-[10px] text-slate-400 block font-bold">Unidad & Chofer</span>
-                <div className="flex items-center gap-1 text-slate-200 font-semibold truncate">
-                  <Truck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span className="truncate">{item.vehiclePlate}</span>
-                </div>
-                {item.trailerPlate && (
-                  <div className="flex items-center gap-1 text-slate-300 text-[11px] truncate">
-                    <span className="text-amber-500 font-bold text-[10px]">[R]</span>
-                    <span className="truncate">{item.trailerPlate}</span>
+              <div className="space-y-2 border-y border-slate-800 py-3">
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Origen</p>
+                    <p className="text-xs font-semibold text-slate-200">{item.origin}</p>
                   </div>
-                )}
-                <span className="text-slate-400 text-[11px] truncate block pt-0.5">{item.driverName}</span>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Destino</p>
+                    <p className="text-xs font-semibold text-slate-200">{item.destination}</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60">
-                <span className="text-[10px] text-slate-400 block font-bold">Horarios</span>
-                <span className="text-slate-300 text-[11px] block mt-0.5">Salida: {item.departureTime}</span>
-                <span className="text-slate-300 text-[11px] block">Llegada: {item.estimatedArrival}</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60 space-y-1">
+                  <span className="text-[10px] text-slate-400 block font-bold">Unidad & Chofer</span>
+                  <div className="flex items-center gap-1 text-slate-200 font-semibold truncate">
+                    <Truck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="truncate">{item.vehiclePlate}</span>
+                  </div>
+                  {item.trailerPlate && (
+                    <div className="flex items-center gap-1 text-slate-300 text-[11px] truncate">
+                      <span className="text-amber-500 font-bold text-[10px]">[R]</span>
+                      <span className="truncate">{item.trailerPlate}</span>
+                    </div>
+                  )}
+                  <span className="text-slate-400 text-[11px] truncate block pt-0.5">{item.driverName}</span>
+                </div>
+
+                <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60">
+                  <span className="text-[10px] text-slate-400 block font-bold">Horarios</span>
+                  <span className="text-slate-300 text-[11px] block mt-0.5">Salida: {item.departureTime}</span>
+                  <span className="text-slate-300 text-[11px] block">Llegada: {item.estimatedArrival}</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal Alta de Despacho */}
       {isModalOpen && (
