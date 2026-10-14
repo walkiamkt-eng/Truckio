@@ -320,34 +320,42 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
                   </div>
 
                   {/* Semaphoric Status Pill */}
-                  <span
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                      health?.status === 'green'
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : health?.status === 'yellow'
-                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                        : 'bg-red-500/15 border-red-500/30 text-red-400 animate-pulse'
-                    }`}
-                  >
+                  <div className="flex items-center gap-2">
+                    {/* Indicador de activo / inactivo */}
+                    {vehicle.is_active === false && (
+                      <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 text-[10px] font-bold">
+                        Inactivo
+                      </span>
+                    )}
                     <span
-                      className={`w-2 h-2 rounded-full ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
                         health?.status === 'green'
-                          ? 'bg-emerald-400'
+                          ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
                           : health?.status === 'yellow'
-                          ? 'bg-amber-400'
-                          : 'bg-red-400'
+                          ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                          : 'bg-red-500/15 border-red-500/30 text-red-400 animate-pulse'
                       }`}
-                    />
-                    <span>
-                      {health?.status === 'green'
-                        ? 'En Regla (>15%)'
-                        : health?.status === 'yellow'
-                        ? 'Alerta (≤15%)'
-                        : isStopped
-                        ? 'Unidad Parada'
-                        : 'Vencido'}
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          health?.status === 'green'
+                            ? 'bg-emerald-400'
+                            : health?.status === 'yellow'
+                            ? 'bg-amber-400'
+                            : 'bg-red-400'
+                        }`}
+                      />
+                      <span>
+                        {health?.status === 'green'
+                          ? 'En Regla (>15%)'
+                          : health?.status === 'yellow'
+                          ? 'Alerta (≤15%)'
+                          : isStopped
+                          ? 'Unidad Parada'
+                          : 'Vencido'}
+                      </span>
                     </span>
-                  </span>
+                  </div>
                 </div>
 
                 {/* Vehicle Model & Year */}
@@ -359,17 +367,11 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
                 </p>
 
                 {/* Metrics */}
-                <div className="grid grid-cols-2 gap-2 my-3 p-3 bg-slate-950/70 rounded-xl border border-slate-800/80">
+                <div className="grid grid-cols-1 gap-2 my-3 p-3 bg-slate-950/70 rounded-xl border border-slate-800/80">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Odómetro</span>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Kilometraje Inicial (KM)</span>
                     <span className="font-mono font-bold text-sm text-white">
-                      {vehicle.current_mileage.toLocaleString()} km
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Horas Motor</span>
-                    <span className="font-mono font-bold text-sm text-white">
-                      {vehicle.current_engine_hours.toLocaleString()} hs
+                      {(vehicle.current_km || 0).toLocaleString()} km
                     </span>
                   </div>
                 </div>
@@ -437,7 +439,6 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
       </div>
 
       {/* Modals */}
-      {/* 1. Vehicle Technical Dossier / PDF Print */}
       {dossierVehicle && (
         <PrintableDossier
           vehicle={dossierVehicle}
@@ -448,7 +449,6 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
         />
       )}
 
-      {/* 2. Add / Edit Vehicle Modal */}
       {vehicleToEdit && (
         <VehicleModal
           vehicleToEdit={vehicleToEdit === 'new' ? null : vehicleToEdit}
@@ -461,7 +461,6 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
         />
       )}
 
-      {/* 3. Maintenance Plan Modal */}
       {planModalOpen && (
         <MaintenancePlanModal
           vehicles={vehicles}
@@ -474,7 +473,6 @@ export const FleetDashboard: React.FC<FleetDashboardProps> = ({
         />
       )}
 
-      {/* 4. Fleet Maintenance & Pending Issues PDF Report Modal */}
       {pdfModalOpen && (
         <FleetReportPDFModal
           vehicles={vehicles}
