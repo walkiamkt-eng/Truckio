@@ -25,7 +25,8 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
   const [model, setModel] = useState(vehicleToEdit?.model || '');
   const [year, setYear] = useState<number | ''>(vehicleToEdit?.year || 2023);
   const [vin, setVin] = useState(vehicleToEdit?.vin || '');
-  const [mileage, setMileage] = useState<number | ''>(vehicleToEdit?.current_mileage || 0);
+  // Mapeamos a la columna real de la base de datos: current_km
+  const [mileage, setMileage] = useState<number | ''>(vehicleToEdit?.current_km ?? 0);
   const [notes, setNotes] = useState(vehicleToEdit?.notes || '');
   const [isActive, setIsActive] = useState<boolean>(vehicleToEdit?.is_active ?? true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +53,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         model: model.trim().toUpperCase(),
         year: year === '' ? undefined : Number(year),
         vin: vin.trim() ? vin.trim().toUpperCase() : undefined,
-        current_mileage: mileage === '' ? 0 : Number(mileage),
+        current_km: mileage === '' ? 0 : Number(mileage), // <--- Nombre de columna exacto en Supabase
         notes: notes.trim() ? notes.trim().toUpperCase() : undefined,
         is_active: isActive,
       };
@@ -195,7 +196,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
             </div>
           </div>
 
-          {/* Odómetro inicial */}
+          {/* Kilometraje Inicial */}
           <div>
             <label className="block text-slate-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
               Kilometraje Inicial (km)
