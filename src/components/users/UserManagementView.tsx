@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, RefreshCw, AlertCircle, CheckCircle2, Trash2, Pencil, Lock } from 'lucide-react';
+import { Users, UserPlus, RefreshCw, AlertCircle, CheckCircle2, Trash2, Pencil, Lock, Loader2 } from 'lucide-react';
 import { UserService, CreateUserData } from '../../services/userService';
 import { supabase } from '../../lib/supabase';
 import type { User, UserRole } from '../../types/truckio';
@@ -14,8 +14,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   
-  // Modales
+  // Modales y Estados de Envío
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // Formulario Nuevo Usuario
@@ -56,6 +57,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
+    setIsSubmittingCreate(true);
 
     try {
       await UserService.createUser(currentUser.tenant_id, createFormData);
@@ -64,7 +66,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
       setCreateFormData({ email: '', password: '', full_name: '', role: 'driver', phone: '' });
       await loadUsers();
     } catch (err: any) {
-      setError(err.message || 'Error al crear el usuario.');
+      setError(err.message || 'Error al crear el usuario. Verifica que el correo no esté ya registrado.');
+    } finally {
+      setIsSubmittingCreate(false);
     }
   };
 
@@ -85,7 +89,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     setIsSubmittingEdit(true);
 
     try {
-      // 1. Validar la contraseña actual del administrador re-autenticándolo en Supabase
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: currentUser.email,
         password: adminPassword,
@@ -95,7 +98,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
         throw new Error('Contraseña de administrador incorrecta. No se realizaron cambios.');
       }
 
-      // 2. Si la clave es correcta, aplicar el cambio de rol/datos
       await UserService.updateUserRole(editingUser.id, editRole);
       
       setSuccessMsg(`Usuario ${editingUser.full_name} actualizado correctamente.`);
@@ -225,7 +227,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Botón de Editar con Lápiz */}
                         {isAdmin && u.id !== currentUser.id && (
                           <button
                             onClick={() => handleOpenEditModal(u)}
@@ -236,7 +237,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                           </button>
                         )}
 
-                        {/* Botón de Eliminar */}
                         {isAdmin && u.id !== currentUser.id && (
                           <button
                             onClick={() => handleDeleteUser(u.id, u.full_name)}
@@ -282,13 +282,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">Correo Electrónico</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">Correo Electrónico (Único)</label>
                 <input
                   type="email"
                   required
                   value={createFormData.email}
                   onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
-                  placeholder="usuario@empresa.com"
+                  placeholder="chofer@empresa.com"
                   className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                 />
               </div>
@@ -306,9 +306,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                   placeholder="Mínimo 6 caracteres (ej. Truckio2026*)"
                   className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Esta será la contraseña con la que el nuevo usuario iniciará sesión en la app.
-                </p>
               </div>
 
               <div>
@@ -326,7 +323,14 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
 
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2.5 text-sm text-slate-400 hover:text-white">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition">Guardar Usuario</button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingCreate}
+                  className="px-5 py-2.5 text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl transition flex items-center gap-2"
+                >
+                  {isSubmittingCreate && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{isSubmittingCreate ? 'Registrando...' : 'Guardar Usuario'}</span>
+                </button>
               </div>
             </form>
           </div>
@@ -369,7 +373,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                 </select>
               </div>
 
-              {/* Confirmación con Contraseña del Administrador */}
               <div className="pt-2 border-t border-slate-800/80 space-y-2">
                 <label className="block text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5" />
@@ -399,9 +402,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                 <button
                   type="submit"
                   disabled={isSubmittingEdit || !adminPassword}
-                  className="px-5 py-2.5 text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl transition"
+                  className="px-5 py-2.5 text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl transition flex items-center gap-2"
                 >
-                  {isSubmittingEdit ? 'Guardando...' : 'Confirmar Cambios'}
+                  {isSubmittingEdit && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{isSubmittingEdit ? 'Guardando...' : 'Confirmar Cambios'}</span>
                 </button>
               </div>
             </form>
