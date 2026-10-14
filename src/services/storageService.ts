@@ -115,7 +115,6 @@ export class StorageService {
     }
 
     try {
-      // Consulta directa a la tabla real 'users' filtrada por tenant_id
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -227,33 +226,29 @@ export class StorageService {
 
   public static async updateOdometerAndHours(
     vehicleId: string,
-    newMileage: number,
-    newHours: number,
+    newKm: number,
     driverUserId?: string,
     forceOverride = false
   ) {
     const currentVehicle = await this.getVehicleById(vehicleId);
     if (!currentVehicle) throw new Error('Vehículo no encontrado');
 
-    const effectiveMileage = forceOverride ? newMileage : Math.max(currentVehicle.current_mileage, newMileage);
-    const effectiveHours = forceOverride ? newHours : Math.max(currentVehicle.current_engine_hours, newHours);
+    const effectiveKm = forceOverride ? newKm : Math.max(currentVehicle.current_km || 0, newKm);
 
     const updatedVehicle = await this.updateVehicle(vehicleId, {
-      current_mileage: effectiveMileage,
-      current_engine_hours: effectiveHours,
+      current_km: effectiveKm,
     });
 
     if (isEffectivelyOffline()) {
       await this.enqueueOfflineAction('update_odometer', {
         vehicleId,
-        newMileage: effectiveMileage,
-        newHours: effectiveHours,
+        newKm: effectiveKm,
         driverUserId,
         timestamp: new Date().toISOString(),
       });
     }
 
-    return { success: true, vehicle: updatedVehicle, message: 'Odómetro actualizado.' };
+    return { success: true, vehicle: updatedVehicle, message: 'Kilometraje actualizado.' };
   }
 
   // --- MAINTENANCE PLANS ---
@@ -393,7 +388,7 @@ export class StorageService {
     const vehiclePlans = plans.filter((p) => p.vehicle_id === vehicle.id);
     const hasOverduePlan = vehiclePlans.some((plan) => {
       const isMileageOverdue =
-        plan.next_service_mileage && vehicle.current_mileage >= plan.next_service_mileage;
+        plan.next_service_mileage && (vehicle.current_km || 0) >= plan.next_service_mileage;
       const isDateOverdue =
         plan.next_service_date && new Date(plan.next_service_date) <= new Date();
       return isMileageOverdue || isDateOverdue;
