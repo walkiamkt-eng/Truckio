@@ -415,12 +415,12 @@ export class StorageService {
     notifyStateChanged();
   }
 
-  // --- CÁLCULO DE SALUD DE VEHÍCULO (CORREGIDO) ---
+  // --- CÁLCULO DE SALUD DE VEHÍCULO (CORREGIDO A MINÚSCULAS) ---
   public static calculateVehicleHealth(
     vehicle: Vehicle,
     plans: MaintenancePlan[] = [],
     issues: Issue[] = []
-  ): { status: 'OK' | 'WARNING' | 'CRITICAL'; score: number; reason: string } {
+  ): { status: 'green' | 'yellow' | 'red'; score: number; reason: string; minRemainingPercentage: number } {
     const vehicleIssues = issues.filter(
       (i) => i.vehicle_id === vehicle.id && i.status !== 'resolved' && i.status !== 'closed'
     );
@@ -428,50 +428,68 @@ export class StorageService {
     const hasCriticalIssue = vehicleIssues.some((i) => i.severity === 'critical' || i.severity === 'high');
     if (hasCriticalIssue) {
       return {
-        status: 'CRITICAL',
+        status: 'red',
         score: 40,
         reason: 'Tiene incidencias críticas o de alta prioridad pendientes',
+        minRemainingPercentage: 0,
       };
     }
 
     const vehiclePlans = plans.filter((p) => p.vehicle_id === vehicle.id);
     const currentKm = vehicle.current_km || 0;
 
-    const hasOverduePlan = vehiclePlans.some((plan) => {
-      const nextDue = (plan.last_service_value || 0) + (plan.target_value || 0);
-      const remaining = nextDue - currentKm;
-      const percentRemaining = plan.target_value > 0 ? (remaining / plan.target_value) * 100 : 100;
-
-      const isMileageOverdue = remaining <= 0;
-      const isWarning = remaining > 0 && percentRemaining <= 15;
-      const isDateOverdue =
-        plan.last_service_date &&
-        plan.trigger_type === 'time_interval' &&
-        new Date(plan.last_service_date).getTime() + (plan.target_value * 24 * 60 * 60 * 1000) <= Date.now();
-
-      return isMileageOverdue || isWarning || isDateOverdue;
-    });
-
-    if (hasOverduePlan) {
+    if (vehiclePlans.length === 0) {
       return {
-        status: 'WARNING',
-        score: 70,
-        reason: 'Mantenimiento preventivo vencido, próximo a vencer o en alerta (≤15%)',
+        status: 'green',
+        score: 100,
+        reason: 'Vehículo activo sin planes preventivos restrictivos configurados',
+        minRemainingPercentage: 100,
       };
     }
 
-    if (vehicleIssues.length > 0) {
+    let lowestPercent = 100;
+    let hasOverdue = false;
+    let hasWarning = false;
+
+    vehiclePlans.forEach((plan) => {
+      const nextDue = (plan.last_service_value || 0) + (plan.target_value || 0);
+      const remaining = nextDue - currentKm;
+      const percent = plan.target_value > 0 ? Math.round((remaining / plan.target_value) * 100) : 100;
+
+      if (percent < lowestPercent) {
+        lowestPercent = percent;
+      }
+
+      if (remaining <= 0) {
+        hasOverdue = true;
+      } else if (percent <= 15) {
+        hasWarning = true;
+      }
+    });
+
+    if (hasOverdue) {
       return {
-        status: 'WARNING',
-        score: 80,
-        reason: 'Tiene incidencias menores reportadas',
+        status: 'red',
+        score: 50,
+        reason: 'Mantenimiento preventivo vencido',
+        minRemainingPercentage: Math.max(0, lowestPercent),
+      };
+    }
+
+    if (hasWarning) {
+      return {
+        status: 'yellow',
+        score: 75,
+        reason: 'Mantenimiento preventivo próximo a vencer (≤15%)',
+        minRemainingPercentage: lowestPercent,
       };
     }
 
     return {
-      status: 'OK',
+      status: 'green',
       score: 100,
-      reason: 'Vehículo en óptimas condiciones',
+      reason: 'Todos los mantenimientos preventivos en regla',
+      minRemainingPercentage: lowestPercent,
     };
   }
 
