@@ -48,3 +48,4 @@ export class AuthService {
       role: profile?.role || user.user_metadata?.role || 'admin',
     } as User;
   }
+}
