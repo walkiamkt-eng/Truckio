@@ -11,44 +11,22 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: '/',
           name: 'Truckio - Gestión de Mantenimiento de Flotas',
           short_name: 'Truckio',
-          description: 'Gestión integral de mantenimiento preventivo y correctivo de flotas e incidencias con soporte offline.',
+          description: 'Gestión integral de mantenimiento preventivo y correctivo de flotas e incidencias.',
           theme_color: '#0f172a',
           background_color: '#0f172a',
           display: 'standalone',
           start_url: '/',
           scope: '/',
-          icons: [
-            {
-              src: '/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-maskable-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          navigateFallbackDenylist: [/^\/api/],
         },
         devOptions: {
-          enabled: true,
-          type: 'module',
+          enabled: false,
         },
       }),
     ],
@@ -63,4 +41,3 @@ export default defineConfig(() => {
     },
   };
 });
-// actualización forzada para build).
