@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
     return u.full_name || (u as any).name || 'Usuario';
   };
 
-  // Obtener de forma robusta el nombre de la empresa (soporta metadata de Supabase y perfiles)
+  // Obtener de forma robusta el nombre de la empresa
   const companyName = 
     (currentUser as any)?.company_name || 
     (currentUser as any)?.user_metadata?.company_name || 
@@ -87,55 +87,52 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-slate-100 select-none">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16 gap-3">
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-slate-950 font-black shadow-lg shadow-amber-500/20">
-              <Truck className="w-5 h-5 stroke-[2.5]" />
+      <div className="max-w-7xl mx-auto px-3 sm:px-6">
+        <div className="flex items-center justify-between h-16 gap-2">
+          {/* Brand & Company Name */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-slate-950 font-black shadow-lg shadow-amber-500/20 flex-shrink-0">
+              <Truck className="w-4 h-4 stroke-[2.5]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-black tracking-tight text-white font-mono">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-base sm:text-xl font-black tracking-tight text-white font-mono">
                   TRUCK<span className="text-amber-400">IO</span>
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-semibold uppercase tracking-wider hidden sm:inline-block">
-                  PWA Fleet OS
-                </span>
               </div>
-              <p className="text-xs text-amber-400 font-semibold truncate max-w-[180px] sm:max-w-xs">
+              <p className="text-[11px] sm:text-xs text-amber-400 font-semibold truncate max-w-[130px] sm:max-w-xs">
                 {companyName}
               </p>
             </div>
           </div>
 
-          {/* NAVEGACIÓN PRINCIPAL */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
+          {/* NAVEGACIÓN PRINCIPAL: VISIBLE EN MÓVIL Y DESKTOP */}
+          <nav className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-[45vw] sm:max-w-none">
             {currentUser?.role === 'driver' ? (
               <>
                 <button
                   onClick={() => onTabChange('driver_hub')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
                     activeTab === 'driver_hub'
                       ? 'bg-amber-500 text-slate-950 shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
-                  🚚 Operación en Ruta
+                  🚚 Ruta
                 </button>
                 <button
                   onClick={() => onTabChange('driver_issues')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
                     activeTab === 'driver_issues' || activeTab === 'fleet_issues'
                       ? 'bg-amber-500 text-slate-950 shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
-                  ⚠️ Mis Incidencias
+                  ⚠️ Incidencias
                 </button>
               </>
             ) : (
-              <>
+              <div className="hidden md:flex items-center gap-1">
                 <button
                   onClick={() => onTabChange('fleet_health')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
@@ -200,31 +197,31 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>Personal</span>
                   </button>
                 )}
-              </>
+              </div>
             )}
           </nav>
 
           {/* Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={toggleSimulatedOffline}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition hidden sm:flex ${
                 !isOnline
                   ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
                   : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700'
               }`}
             >
               {!isOnline ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5 text-emerald-400" />}
-              <span className="hidden sm:inline">{!isOnline ? 'Offline' : 'Online'}</span>
+              <span>{!isOnline ? 'Offline' : 'Online'}</span>
             </button>
 
             {currentUser?.role !== 'driver' && onOpenFleetPdf && (
               <button
                 onClick={onOpenFleetPdf}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-sm transition active:scale-95"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-sm transition active:scale-95 hidden sm:flex"
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Informe PDF</span>
+                <span>PDF</span>
               </button>
             )}
 
@@ -248,7 +245,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition active:scale-95"
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition active:scale-95"
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${
                   currentUser?.role === 'driver'
@@ -259,15 +256,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}>
                   {getUserDisplayName(currentUser).charAt(0)}
                 </div>
-                <div className="text-left hidden lg:block">
-                  <div className="font-semibold text-white leading-tight truncate max-w-[120px]">
-                    {getUserDisplayName(currentUser)}
-                  </div>
-                  <div className="text-[10px] text-slate-400 leading-tight">
-                    {getRoleLabel(currentUser?.role)}
-                  </div>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
               {showUserDropdown && (
