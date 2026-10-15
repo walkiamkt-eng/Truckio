@@ -60,20 +60,24 @@ export default function App() {
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [registerSuccess, setRegisterSuccess] = useState<string | null>(null);
 
-  // Verificación de sesión Supabase (con fallback seguro de compañía)
+  // Verificación de sesión Supabase optimizada (sin resetear la pestaña del chofer arbitrariamente)
   const checkSession = useCallback(async () => {
     try {
       const user = await AuthService.getCurrentProfile();
       if (user) {
+        // Asegurar nombre de empresa corporativo universal
         if (!user.company_name) {
           (user as any).company_name = 'Transportes Aconcagua S.A.';
         }
         setCurrentUser(user);
-        if (user.role === 'driver') {
-          setActiveTab('driver_hub');
-        } else if (activeTab === 'driver_hub') {
-          setActiveTab('fleet_health');
-        }
+        
+        // Solo establecer pestaña inicial si el usuario acaba de iniciar sesión o no está definida
+        setActiveTab((prevTab) => {
+          if (user.role === 'driver') {
+            return prevTab === 'driver_issues' ? 'driver_issues' : 'driver_hub';
+          }
+          return prevTab === 'driver_hub' ? 'fleet_health' : prevTab;
+        });
       } else {
         setCurrentUser(null);
       }
@@ -81,7 +85,7 @@ export default function App() {
       console.error('Error al verificar sesión:', error);
       setCurrentUser(null);
     }
-  }, [activeTab]);
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!currentUser) return;
