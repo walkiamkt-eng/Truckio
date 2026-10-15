@@ -332,7 +332,7 @@ export class StorageService {
     notifyStateChanged();
   }
 
-  // --- ISSUES ---
+  // --- ISSUES (CORREGIDO CON MANEJO DIRECTO DE ERRORES DE SUPABASE) ---
   public static async getIssues(tenantId?: string): Promise<Issue[]> {
     const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
     if (isEffectivelyOffline()) {
@@ -345,11 +345,16 @@ export class StorageService {
         .select('*')
         .eq('tenant_id', validTenantId)
         .order('created_at', { ascending: false });
+
       if (error) {
+        console.error('Error al obtener incidencias de Supabase:', error.message);
         await this.init();
         return await db.issues.where('tenant_id').equals(validTenantId).toArray();
       }
-      if (data && data.length > 0) await db.issues.bulkPut(data);
+
+      if (data && data.length > 0) {
+        await db.issues.bulkPut(data);
+      }
       return data || [];
     } catch {
       await this.init();
@@ -377,16 +382,20 @@ export class StorageService {
 
     try {
       const { data, error } = await supabase.from('issues').insert([normalizedIssue]).select().single();
-      if (error) throw error;
+      if (error) {
+        console.error('Error de Supabase al insertar incidencia:', error.message);
+        throw new Error(`Error en Supabase: ${error.message}`);
+      }
+      
       await db.issues.put(data);
       notifyStateChanged();
       return data;
-    } catch {
+    } catch (err: any) {
+      console.error('Fallback a IndexedDB por error:', err);
       await this.init();
-      await SyncService.enqueueAction('CREATE_ISSUE', normalizedIssue);
       await db.issues.put(normalizedIssue);
       notifyStateChanged();
-      return normalizedIssue;
+      throw err; // Lanzar el error para ser advertidos en UI en caso de RLS u otro bloqueo
     }
   }
 
@@ -415,7 +424,7 @@ export class StorageService {
     notifyStateChanged();
   }
 
-  // --- CÁLCULO DE SALUD DE VEHÍCULO (CORREGIDO A MINÚSCULAS) ---
+  // --- CÁLCULO DE SALUD DE VEHÍCULO ---
   public static calculateVehicleHealth(
     vehicle: Vehicle,
     plans: MaintenancePlan[] = [],
