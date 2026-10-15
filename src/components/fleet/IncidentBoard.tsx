@@ -104,6 +104,9 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
         repair_notes: repairNotes || undefined,
       });
 
+      // Disparar evento global para sincronización instantánea
+      window.dispatchEvent(new Event('TRUCKIO_STATE_CHANGED'));
+
       if (targetStatus === 'resolved') {
         confetti({
           particleCount: 60,
@@ -139,6 +142,9 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
         city: newCity.trim() || 'En ruta',
       });
 
+      // Disparar evento global para reflejar la incidencia recién creada al instante
+      window.dispatchEvent(new Event('TRUCKIO_STATE_CHANGED'));
+
       confetti({
         particleCount: 50,
         spread: 60,
@@ -173,7 +179,12 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setNewModalOpen(true)}
+            onClick={() => {
+              if (!newVehicleId && vehicles.length > 0) {
+                setNewVehicleId(vehicles[0].id);
+              }
+              setNewModalOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition active:scale-95"
           >
             <Plus className="w-4 h-4" />
