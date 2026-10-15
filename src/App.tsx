@@ -169,6 +169,7 @@ export default function App() {
     };
   }, [checkSession]);
 
+  // Sincronización y recarga automática ante eventos locales o red
   useEffect(() => {
     if (currentUser) {
       loadData();
@@ -189,6 +190,48 @@ export default function App() {
     return () => {
       window.removeEventListener('online', handleSyncAndReload);
       window.removeEventListener(TRUCKIO_STATE_CHANGED, handleSyncAndReload);
+    };
+  }, [currentUser, loadData]);
+
+  // 🔴 SUPABASE REALTIME: Sincronización automática en vivo para TODOS los Administradores del Tenant
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'driver') return;
+
+    const tenantId = currentUser.tenant_id;
+    if (!tenantId) return;
+
+    const channel = supabase
+      .channel(`admin-realtime-${tenantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'issues',
+          filter: `tenant_id=eq.${tenantId}`,
+        },
+        (payload) => {
+          console.log('🔄 Sincronización en tiempo real (Issues):', payload);
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vehicles',
+          filter: `tenant_id=eq.${tenantId}`,
+        },
+        (payload) => {
+          console.log('🔄 Sincronización en tiempo real (Vehicles):', payload);
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, [currentUser, loadData]);
 
