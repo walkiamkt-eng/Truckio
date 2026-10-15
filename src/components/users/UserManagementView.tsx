@@ -61,7 +61,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     setError(null);
     setSuccessMsg(null);
 
-    // Validación de regla de negocio: un solo administrador
     if (createFormData.role === 'admin' && hasAdminAlready) {
       setError('La empresa ya cuenta con un Administrador. Solo puede existir un Administrador por empresa.');
       return;
@@ -71,12 +70,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
 
     try {
       await UserService.createUser(currentUser.tenant_id, createFormData);
-      setSuccessMsg(`Usuario ${createFormData.full_name} registrado correctamente.`);
+      
+      // Cerrar modal y limpiar formulario
       setIsCreateModalOpen(false);
       setCreateFormData({ email: '', password: '', full_name: '', role: 'driver', phone: '' });
+      
+      setSuccessMsg(`Usuario registrado correctamente.`);
       await loadUsers();
     } catch (err: any) {
-      setError(err.message || 'Error al crear el usuario. Verifica que el correo no esté ya registrado.');
+      setError(err.message || 'Error al crear el usuario.');
     } finally {
       setIsSubmittingCreate(false);
     }
