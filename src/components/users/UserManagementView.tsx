@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, RefreshCw, AlertCircle, CheckCircle2, Trash2, Pencil, Lock, Loader2 } from 'lucide-react';
+import { Users, UserPlus, RefreshCw, AlertCircle, CheckCircle2, Trash2, Pencil, Lock, Loader2, ShieldAlert } from 'lucide-react';
 import { UserService, CreateUserData } from '../../services/userService';
 import { supabase } from '../../lib/supabase';
 import type { User, UserRole } from '../../types/truckio';
@@ -18,6 +18,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  // Verificar si ya existe un administrador en la empresa
+  const hasAdminAlready = users.some((u) => u.role === 'admin');
 
   // Formulario Nuevo Usuario
   const [createFormData, setCreateFormData] = useState<CreateUserData>({
@@ -57,6 +60,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
+
+    // Validación de regla de negocio: un solo administrador
+    if (createFormData.role === 'admin' && hasAdminAlready) {
+      setError('La empresa ya cuenta con un Administrador. Solo puede existir un Administrador por empresa.');
+      return;
+    }
+
     setIsSubmittingCreate(true);
 
     try {
@@ -86,6 +96,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     if (!editingUser) return;
     setError(null);
     setSuccessMsg(null);
+
+    if (editRole === 'admin' && users.some(u => u.role === 'admin' && u.id !== editingUser.id)) {
+      setError('Ya existe un Administrador principal en la empresa.');
+      return;
+    }
+
     setIsSubmittingEdit(true);
 
     try {
@@ -112,7 +128,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
   };
 
   // Eliminar Usuario
-  const handleDeleteUser = async (userId: string, name: string) => {
+  const handleDeleteUser = async (userId: string, name: string, role: UserRole) => {
+    if (role === 'admin') {
+      setError('No se puede eliminar al Administrador principal de la empresa.');
+      return;
+    }
     if (!confirm(`¿Estás seguro de que deseas eliminar al usuario "${name}"?`)) return;
     try {
       await UserService.deleteUser(userId);
@@ -146,7 +166,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
             Gestión de Personal
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Administra los usuarios y roles asignados a tu empresa.
+            Administra los usuarios (1 Administrador y múltiples Gerentes y Choferes) asignados a tu empresa.
           </p>
         </div>
 
@@ -237,9 +257,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                           </button>
                         )}
 
-                        {isAdmin && u.id !== currentUser.id && (
+                        {isAdmin && u.id !== currentUser.id && u.role !== 'admin' && (
                           <button
-                            onClick={() => handleDeleteUser(u.id, u.full_name)}
+                            onClick={() => handleDeleteUser(u.id, u.full_name, u.role)}
                             className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
                             title="Eliminar usuario"
                           >
@@ -288,7 +308,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                   required
                   value={createFormData.email}
                   onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
-                  placeholder="chofer@empresa.com"
+                  placeholder="gerente@empresa.com"
                   className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                 />
               </div>
@@ -303,7 +323,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                   minLength={6}
                   value={createFormData.password}
                   onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
-                  placeholder="Mínimo 6 caracteres (ej. Truckio2026*)"
+                  placeholder="Mínimo 6 caracteres"
                   className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                 />
               </div>
@@ -316,9 +336,17 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                   className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                 >
                   <option value="driver">Chofer</option>
-                  <option value="fleet_manager">Gerente de Flota</option>
-                  <option value="admin">Administrador</option>
+                  <option value="fleet_manager">Gerente de Flota (Múltiples permitidos)</option>
+                  <option value="admin" disabled={hasAdminAlready}>
+                    Administrador {hasAdminAlready ? '(Ya existe uno en la empresa)' : '(Único)'}
+                  </option>
                 </select>
+                {hasAdminAlready && (
+                  <p className="text-[11px] text-amber-400/80 mt-1 flex items-center gap-1">
+                    <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                    Ya hay un Administrador asignado. Nuevos registros deben ser Gerentes o Choferes.
+                  </p>
+                )}
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
@@ -369,7 +397,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
                 >
                   <option value="driver">Chofer</option>
                   <option value="fleet_manager">Gerente de Flota</option>
-                  <option value="admin">Administrador</option>
+                  <option value="admin" disabled={hasAdminAlready && editingUser.role !== 'admin'}>
+                    Administrador
+                  </option>
                 </select>
               </div>
 
