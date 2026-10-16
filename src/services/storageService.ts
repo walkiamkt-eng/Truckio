@@ -85,6 +85,10 @@ export class StorageService {
     truckId: string;
     trailerId: string;
     startOdometer: number;
+    departureDate: string;
+    departureTime: string;
+    arrivalDate?: string;
+    arrivalTime?: string;
   }): Promise<void> {
     const payload = {
       ...dispatchData,
@@ -332,7 +336,7 @@ export class StorageService {
     notifyStateChanged();
   }
 
-  // --- ISSUES (CORREGIDO CON MANEJO DIRECTO DE ERRORES DE SUPABASE) ---
+  // --- ISSUES ---
   public static async getIssues(tenantId?: string): Promise<Issue[]> {
     const validTenantId = tenantId && tenantId.length === 36 ? tenantId : DEFAULT_TENANT_ID;
     if (isEffectivelyOffline()) {
@@ -395,7 +399,7 @@ export class StorageService {
       await this.init();
       await db.issues.put(normalizedIssue);
       notifyStateChanged();
-      throw err; // Lanzar el error para ser advertidos en UI en caso de RLS u otro bloqueo
+      throw err;
     }
   }
 
