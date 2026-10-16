@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Clock,
@@ -48,6 +48,18 @@ export const IncidentBoard: React.FC<IncidentBoardProps> = ({
   const [cost, setCost] = useState<number | ''>('');
   const [repairNotes, setRepairNotes] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  // Escuchar cambios globales en tiempo real para evitar requerir F5
+  useEffect(() => {
+    const handleStateChange = () => {
+      onRefresh();
+    };
+
+    window.addEventListener('TRUCKIO_STATE_CHANGED', handleStateChange);
+    return () => {
+      window.removeEventListener('TRUCKIO_STATE_CHANGED', handleStateChange);
+    };
+  }, [onRefresh]);
 
   // Filtered issues
   const filteredIssues = issues.filter((iss) => {
