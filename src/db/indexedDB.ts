@@ -34,7 +34,7 @@ export class TruckioDatabase extends Dexie {
 
 export const db = new TruckioDatabase();
 
-// Initial Pilot Seed Data (1 Tenant, 3 Users, 10 Vehicles: 5 Trucks + 5 Trailers, Pre-configured maintenance rules & issues)
+// Initial Pilot Seed Data (Clean baseline with no auto-assigned relationships)
 export const DEFAULT_TENANT_ID = '11111111-1111-1111-1111-111111111111';
 
 export const INITIAL_TENANT: Tenant = {
@@ -43,6 +43,7 @@ export const INITIAL_TENANT: Tenant = {
   created_at: new Date('2025-01-10T08:00:00Z').toISOString(),
 };
 
+// Users initialized without any pre-assigned vehicle connections
 export const INITIAL_USERS: User[] = [
   {
     id: 'user-driver-carlos',
@@ -51,7 +52,6 @@ export const INITIAL_USERS: User[] = [
     full_name: 'Carlos Gutiérrez',
     role: 'driver',
     phone: '+54 9 11 4820-9912',
-    assigned_vehicle_id: 'veh-truck-01',
     created_at: new Date('2025-01-15T09:00:00Z').toISOString(),
   },
   {
@@ -88,7 +88,7 @@ export const INITIAL_VEHICLES: Vehicle[] = [
     current_mileage: 142500,
     current_engine_hours: 4200,
     is_active: true,
-    notes: 'Tractor asignado a corredor Buenos Aires - Córdoba - Mendoza.',
+    notes: 'Tractor disponible para asignación.',
     created_at: new Date('2025-01-15T10:00:00Z').toISOString(),
   },
   {
@@ -231,7 +231,6 @@ export const INITIAL_VEHICLES: Vehicle[] = [
 ];
 
 export const INITIAL_MAINTENANCE_PLANS: MaintenancePlan[] = [
-  // Planes para Scania R450 (veh-truck-01) -> Salud VERDE (Margen > 15%)
   {
     id: 'plan-01',
     tenant_id: DEFAULT_TENANT_ID,
@@ -239,8 +238,8 @@ export const INITIAL_MAINTENANCE_PLANS: MaintenancePlan[] = [
     title: 'Cambio de Aceite Sintético y Filtros de Motor',
     description: 'Reemplazo de 38L 10W-40, filtro de aceite, combustible y trampa de agua.',
     trigger_type: 'mileage',
-    target_value: 40000, // cada 40.000 km
-    last_service_value: 120000, // último a los 120.000 km -> próximo a 160.000 km (actual 142.500 km -> resta 17.500 km, margen 43.7% -> VERDE)
+    target_value: 40000,
+    last_service_value: 120000,
     last_service_date: '2025-01-05',
     created_at: new Date('2025-01-10T10:00:00Z').toISOString(),
   },
@@ -252,12 +251,10 @@ export const INITIAL_MAINTENANCE_PLANS: MaintenancePlan[] = [
     description: 'Control de holgura de balancines y calibración electrónica.',
     trigger_type: 'mileage',
     target_value: 80000,
-    last_service_value: 100000, // próximo 180.000 km -> resta 37.500 km -> VERDE
+    last_service_value: 100000,
     last_service_date: '2024-11-12',
     created_at: new Date('2025-01-10T10:00:00Z').toISOString(),
   },
-
-  // Planes para Mercedes-Benz Actros (veh-truck-03) -> Salud ROJA (VENCIDO + UNIDAD PARADA)
   {
     id: 'plan-03',
     tenant_id: DEFAULT_TENANT_ID,
@@ -266,12 +263,10 @@ export const INITIAL_MAINTENANCE_PLANS: MaintenancePlan[] = [
     description: 'Cambio de fluidos sintéticos MB 235.11 y verificación de embrague.',
     trigger_type: 'mileage',
     target_value: 60000,
-    last_service_value: 150000, // próximo a los 210.000 km -> actual 210.400 km (¡VENCIDO POR 400 KM! -> ROJO)
+    last_service_value: 150000,
     last_service_date: '2024-09-18',
     created_at: new Date('2025-01-10T10:00:00Z').toISOString(),
   },
-
-  // Planes para Vulcano Batea (veh-trailer-02) -> Salud AMARILLA (Margen <= 15%)
   {
     id: 'plan-04',
     tenant_id: DEFAULT_TENANT_ID,
@@ -280,12 +275,10 @@ export const INITIAL_MAINTENANCE_PLANS: MaintenancePlan[] = [
     description: 'Lubricación de levas de freno, rodillos y verificación de juego axial.',
     trigger_type: 'mileage',
     target_value: 20000,
-    last_service_value: 46000, // próximo a los 66.000 km -> actual 65.000 km (restan 1.000 km = 5% restante <= 15% -> AMARILLO)
+    last_service_value: 46000,
     last_service_date: '2025-01-12',
     created_at: new Date('2025-01-10T10:00:00Z').toISOString(),
   },
-
-  // Planes para Bonano Furgón Térmico (veh-trailer-03) -> Basado en horas motor equipo de frío
   {
     id: 'plan-05',
     tenant_id: DEFAULT_TENANT_ID,
@@ -293,13 +286,11 @@ export const INITIAL_MAINTENANCE_PLANS: MaintenancePlan[] = [
     title: 'Mantenimiento Preventivo Unidad Thermo King SLXi',
     description: 'Cambio de correas, aceite de compresor Copeland, filtro secador y gas R452A.',
     trigger_type: 'engine_hours',
-    target_value: 1000, // cada 1.000 hs
-    last_service_value: 2500, // próximo a 3.500 hs -> actual 3.400 hs (restan 100 hs = 10% restante <= 15% -> AMARILLO)
+    target_value: 1000,
+    last_service_value: 2500,
     last_service_date: '2024-12-01',
     created_at: new Date('2025-01-10T10:00:00Z').toISOString(),
   },
-
-  // Plan por intervalo de tiempo para Volvo FH (veh-truck-02)
   {
     id: 'plan-06',
     tenant_id: DEFAULT_TENANT_ID,
@@ -307,22 +298,21 @@ export const INITIAL_MAINTENANCE_PLANS: MaintenancePlan[] = [
     title: 'Inspección Técnica Obligatoria RTO / VTV Anual',
     description: 'Verificación de frenometría, gases de escape y tren delantero.',
     trigger_type: 'time_interval',
-    target_value: 365, // cada 365 días
+    target_value: 365,
     last_service_value: 0,
-    last_service_date: '2024-11-01', // faltan meses -> VERDE
+    last_service_date: '2024-11-01',
     created_at: new Date('2025-01-10T10:00:00Z').toISOString(),
   },
 ];
 
 export const INITIAL_ISSUES: Issue[] = [
-  // Incidencia Crítica - UNIDAD PARADA (Dispara estado ROJO en Mercedes-Benz Actros)
   {
     id: 'iss-01',
     tenant_id: DEFAULT_TENANT_ID,
     vehicle_id: 'veh-truck-03',
     reported_by_user_id: 'user-driver-carlos',
     title: 'Pérdida de presión en circuito de frenos y manguera neumática cortada',
-    description: 'Al frenar en peaje de Zárate sonó la alarma sonora de baja presión de aire en ejes traseros. Manómetro marca 4.5 bar y el compresor no recupera. Camión orillado en banquina segura km 92.',
+    description: 'Al frenar en peaje de Zárate sonó la alarma sonora de baja presión de aire en ejes traseros. Manómetro marca 4.5 bar y el compresor no recupera.',
     severity: 'critical',
     mobility: 'stopped',
     status: 'reported',
@@ -342,15 +332,13 @@ export const INITIAL_ISSUES: Issue[] = [
       },
     ],
   },
-
-  // Incidencia en Taller - Remolque Bonano Térmico
   {
     id: 'iss-02',
     tenant_id: DEFAULT_TENANT_ID,
     vehicle_id: 'veh-trailer-03',
     reported_by_user_id: 'user-driver-carlos',
     title: 'Falla intermitente en sensor de deshielo Thermo King (Código alarma 20)',
-    description: 'El display indica código 20 por temperatura de serpentina anormal. La carga de lácteos requiere mantener -18°C y está subiendo a -12°C.',
+    description: 'El display indica código 20 por temperatura de serpentina anormal.',
     severity: 'high',
     mobility: 'running',
     status: 'in_workshop',
@@ -358,11 +346,9 @@ export const INITIAL_ISSUES: Issue[] = [
     state: 'Santa Fe',
     assigned_workshop: 'Refrigeración Integral del Litoral',
     repair_cost: 245000,
-    repair_notes: 'Reemplazo de termistor de evaporador y presostato de alta. En prueba de ciclado.',
+    repair_notes: 'Reemplazo de termistor de evaporador y presostato de alta.',
     created_at: new Date('2025-02-10T11:15:00Z').toISOString(),
   },
-
-  // Incidencia Resuelta - Scania S500
   {
     id: 'iss-03',
     tenant_id: DEFAULT_TENANT_ID,
